@@ -1,0 +1,3 @@
+[submodule "medleydb"]
+	path = medleydb
+	url = https://github.com/duotien/medleydb.git
