@@ -273,7 +273,7 @@ def create_melody3_annotation(mtrack, fs=FS, hop=HOP):
     return melody3
 
 
-def write_melodies_to_csv(mtrack, melody1, melody2, melody3):
+def write_melodies_to_csv(mtrack, melody1=None, melody2=None, melody3=None):
     """Write melodies to csv files in the correct directory.
 
     Parameters
@@ -310,6 +310,54 @@ def write_melodies_to_csv(mtrack, melody1, melody2, melody3):
         with open(mtrack.melody3_fpath, "w") as fhandle:
             writer = csv.writer(fhandle)
             writer.writerows(melody3)
+    else:
+        print("melody 3 empty")
+
+def write_melodies_to_csv_forked(mtrack, output_dir, melody1=None, melody2=None, melody3=None, overwrite=False):
+    """Write melodies to csv files in the correct directory.
+
+    Parameters
+    ----------
+    mtrack : Multitrack
+        Multitrack object
+    melody1 : np.array
+        Melody 1 annotation
+    melody2 : np.array
+        Melody 2 annotation
+    melody3 : np.array
+        Melody 3 annotation
+
+    """
+
+    if melody1 is not None:
+        print("writing melody 1...")
+        melody1_fpath_txt = os.path.join(output_dir, 'Melody1_midi', mtrack.track_id+'.csv')
+        if not os.path.exists(melody1_fpath_txt) or overwrite:
+            os.makedirs(os.path.split(melody1_fpath_txt)[0], exist_ok=True)
+            with open(melody1_fpath_txt, "w") as fhandle:
+                writer = csv.writer(fhandle)
+                writer.writerows(melody1)
+        else:
+            print(f"Path: {melody1_fpath_txt} already existed, skipping.")
+    else:
+        print("melody 1 empty")
+
+    if melody2 is not None:
+        print("writing melody 2...")
+        melody2_fpath_txt = os.path.join(output_dir, 'Melody2_midi', mtrack.track_id+'.csv')
+        if not os.path.exists(melody2_fpath_txt) or overwrite:
+            os.makedirs(os.path.split(melody2_fpath_txt)[0], exist_ok=True)
+
+            with open(melody2_fpath_txt, "w") as fhandle:
+                writer = csv.writer(fhandle)
+                writer.writerows(melody2)
+        else:
+            print(f"Path: {melody2_fpath_txt} already existed, skipping.")
+    else:
+        print("melody 2 empty")
+
+    if melody3 is not None:
+        print("writing melody 3... is not implemented yet.")
     else:
         print("melody 3 empty")
 
@@ -359,21 +407,21 @@ def write_melodies_to_txt(mtrack, output_dir, melody1=None, melody2=None, melody
         print("melody 2 empty")
 
     if melody3 is not None:
-        print("writing melody 3...")
-        melody3_fpath_txt = os.path.join(output_dir, 'Melody3_midi', mtrack.track_id+'.txt')
-        os.makedirs(os.path.split(melody3_fpath_txt)[0], exist_ok=True)
-        if not os.path.exists(melody3_fpath_txt) or overwrite:
-            with open(melody3_fpath_txt, "w") as txt_file:
-                for line in melody3:
-                    txt_file.write(str(line[0]) +"\t" + str(line[1]) + "\t"+ str(line[2]) + "\n")
-                txt_file.close()
-        else:
-            print(f"Path: {melody3_fpath_txt} already existed, skipping.")
+        print("writing melody 3... is not implemented yet.")
+        # melody3_fpath_txt = os.path.join(output_dir, 'Melody3_midi', mtrack.track_id+'.txt')
+        # os.makedirs(os.path.split(melody3_fpath_txt)[0], exist_ok=True)
+        # if not os.path.exists(melody3_fpath_txt) or overwrite:
+        #     with open(melody3_fpath_txt, "w") as txt_file:
+        #         for line in melody3:
+        #             txt_file.write(str(line[0]) +"\t" + str(line[1]) + "\t"+ str(line[2]) + "\n")
+        #         txt_file.close()
+        # else:
+        #     print(f"Path: {melody3_fpath_txt} already existed, skipping.")
     else:
         print("melody 3 empty")
 
 
-def gen_label(track_id, output_dir, fs=FS, hop=HOP, overwrite=False, convert_to_midi = False, round_method = 'round'):
+def gen_label(track_id, output_dir, fs=FS, hop=HOP, overwrite=False, convert_to_midi = False, round_method = 'round', to_csv: bool=True):
     """Main function to create melody annotations for a multitrack.
     """
     mtrack = medleydb.MultiTrack(track_id)
@@ -395,14 +443,18 @@ def gen_label(track_id, output_dir, fs=FS, hop=HOP, overwrite=False, convert_to_
         if convert_to_midi:
             melody3[:,1:] = librosa.hz_to_midi(melody3[:,1:])
         if round_method == 'round':
-            melody3[:,1] = np.round(melody3[:,1:])
+            melody3[:,1:] = np.round(melody3[:,1:])
         if round_method == 'ceil':
-            melody3[:,1] = np.round(melody3[:,1:])
+            melody3[:,1:] = np.round(melody3[:,1:])
         melody3_nz = melody3
         melody3_nz[melody3_nz==-np.inf] = 0
     else:
         melody3_nz = None
-    write_melodies_to_txt(mtrack, output_dir, melody1_nz, melody2_nz, melody3_nz, overwrite=overwrite)
+    if to_csv:
+        write_melodies_to_csv_forked(mtrack, output_dir, melody1_nz, melody2_nz, melody3_nz, overwrite=overwrite)
+    else:
+        write_melodies_to_txt(mtrack, output_dir, melody1_nz, melody2_nz, melody3_nz, overwrite=overwrite)
+
 
 def compute_end_time_stamps(melody: np.ndarray, convert_to_midi: bool=False, round_method: str or None='round'):
     
@@ -431,3 +483,5 @@ def compute_end_time_stamps(melody: np.ndarray, convert_to_midi: bool=False, rou
         # print("USING MIDI")
     # shutil.copy2(mtrack.mix_path,audio_out_dir)
     return melody_nz
+
+# %%
