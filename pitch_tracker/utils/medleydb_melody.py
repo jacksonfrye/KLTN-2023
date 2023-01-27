@@ -328,9 +328,10 @@ def write_melodies_to_csv_forked(mtrack, output_dir, melody1=None, melody2=None,
         Melody 3 annotation
 
     """
+    log_string = f'writing {mtrack.track_id} '
 
     if melody1 is not None:
-        print("writing melody 1...")
+        log_string += '1'
         melody1_fpath_txt = os.path.join(output_dir, 'Melody1_midi', mtrack.track_id+'.csv')
         if not os.path.exists(melody1_fpath_txt) or overwrite:
             os.makedirs(os.path.split(melody1_fpath_txt)[0], exist_ok=True)
@@ -340,10 +341,11 @@ def write_melodies_to_csv_forked(mtrack, output_dir, melody1=None, melody2=None,
         else:
             print(f"Path: {melody1_fpath_txt} already existed, skipping.")
     else:
-        print("melody 1 empty")
+        log_string += '_'
+
 
     if melody2 is not None:
-        print("writing melody 2...")
+        log_string += '2'
         melody2_fpath_txt = os.path.join(output_dir, 'Melody2_midi', mtrack.track_id+'.csv')
         if not os.path.exists(melody2_fpath_txt) or overwrite:
             os.makedirs(os.path.split(melody2_fpath_txt)[0], exist_ok=True)
@@ -354,12 +356,13 @@ def write_melodies_to_csv_forked(mtrack, output_dir, melody1=None, melody2=None,
         else:
             print(f"Path: {melody2_fpath_txt} already existed, skipping.")
     else:
-        print("melody 2 empty")
+        log_string += '_'
 
     if melody3 is not None:
-        print("writing melody 3... is not implemented yet.")
+        log_string += '3*'
     else:
-        print("melody 3 empty")
+        log_string += '_'
+    print(log_string)
 
 def write_melodies_to_txt(mtrack, output_dir, melody1=None, melody2=None, melody3=None, overwrite=False):
     """Write melodies to csv files in the correct directory.
@@ -376,9 +379,9 @@ def write_melodies_to_txt(mtrack, output_dir, melody1=None, melody2=None, melody
         Melody 3 annotation
 
     """
-
+    log_string = f'writing {mtrack.track_id} '
     if melody1 is not None:
-        print("writing melody 1...")
+        log_string += '1'
         melody1_fpath_txt = os.path.join(output_dir, 'Melody1_midi', mtrack.track_id+'.txt')
         if not os.path.exists(melody1_fpath_txt) or overwrite:
             os.makedirs(os.path.split(melody1_fpath_txt)[0], exist_ok=True)
@@ -389,10 +392,10 @@ def write_melodies_to_txt(mtrack, output_dir, melody1=None, melody2=None, melody
         else:
             print(f"Path: {melody1_fpath_txt} already existed, skipping.")
     else:
-        print("melody 1 empty")
+        log_string += '_'
 
     if melody2 is not None:
-        print("writing melody 2...")
+        log_string += '2'
         melody2_fpath_txt = os.path.join(output_dir, 'Melody2_midi', mtrack.track_id+'.txt')
         if not os.path.exists(melody2_fpath_txt) or overwrite:
             os.makedirs(os.path.split(melody2_fpath_txt)[0], exist_ok=True)
@@ -404,10 +407,10 @@ def write_melodies_to_txt(mtrack, output_dir, melody1=None, melody2=None, melody
         else:
             print(f"Path: {melody2_fpath_txt} already existed, skipping.")
     else:
-        print("melody 2 empty")
+        log_string += '_'
 
     if melody3 is not None:
-        print("writing melody 3... is not implemented yet.")
+        log_string += '3*'
         # melody3_fpath_txt = os.path.join(output_dir, 'Melody3_midi', mtrack.track_id+'.txt')
         # os.makedirs(os.path.split(melody3_fpath_txt)[0], exist_ok=True)
         # if not os.path.exists(melody3_fpath_txt) or overwrite:
@@ -418,7 +421,8 @@ def write_melodies_to_txt(mtrack, output_dir, melody1=None, melody2=None, melody
         # else:
         #     print(f"Path: {melody3_fpath_txt} already existed, skipping.")
     else:
-        print("melody 3 empty")
+        log_string += '_'
+    print(log_string)
 
 
 def gen_label(track_id, output_dir, fs=FS, hop=HOP, overwrite=False, convert_to_midi = False, round_method = 'round', to_csv: bool=True):
