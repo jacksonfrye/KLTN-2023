@@ -27,3 +27,5 @@ conda develop .
 cd medleydb
 conda develop .
 ```
+
+5. Follow this guide to install pytorch: https://pytorch.org/get-started/locally/
