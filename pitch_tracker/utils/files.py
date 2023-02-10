@@ -1,6 +1,20 @@
 import pickle
 from pathlib import Path
 from datetime import datetime
+import os
+import csv
+
+def get_file_name(file_path:str, include_ext:bool=False):
+    _, file_name_with_ext = os.path.split(file_path)
+    if include_ext:
+        return file_name_with_ext
+    file_name, _ = os.path.splitext(file_name_with_ext)
+    return file_name
+
+def list_file_paths_in_dir(dir_path:str, include_ext=None):
+    file_paths = (os.path.join(dir_path, file_name) for file_name in os.listdir(dir_path))
+    file_paths = (file_path for file_path in file_paths if os.path.isfile(file_path))
+    return file_paths
 
 def save_pickle(obj, file_path, dir_path=None, is_overwrite=True):
     """Save the object to a pickled file, currently using pickle protocol 5
