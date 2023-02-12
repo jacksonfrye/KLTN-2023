@@ -13,15 +13,16 @@ import torch
 
 
 
-def load_audio_mono(file_path, sample_rate):
+def load_audio_mono(file_path, sample_rate, keep_channel_dim=True):
     """Load the audio file with target sample rate, down mix to mono.
 
     Args:
         file_path (str): the audio file path
         sample_rate (int): target sample rate
+        keep_channel_dim (bool): if True, keep the channel dimension.
 
     Return:
-        torch.Tensor: Audio array
+        torch.Tensor: Audio array, [n_channels, n_samples] or [n_samples]
         int: sample rate 
     """    
     signal, sr = torchaudio.load(file_path, channels_first=False)
@@ -32,6 +33,8 @@ def load_audio_mono(file_path, sample_rate):
     # downmix
     if signal.shape[1] > 1:
         signal = remix_torch(signal, 1)
+    if keep_channel_dim:
+        signal = torch.unsqueeze(signal, 0)
     return signal, sr
 
 def resample(signal, old_sr, new_sr):
