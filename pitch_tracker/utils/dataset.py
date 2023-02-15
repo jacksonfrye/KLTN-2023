@@ -1,6 +1,5 @@
 import csv
-from typing import Dict, Any, Union
-
+from typing import Dict, Any, Tuple, Union
 
 import numpy as np
 import librosa
@@ -9,6 +8,7 @@ from torchaudio.transforms import MelSpectrogram
 from torchaudio.functional import amplitude_to_DB
 
 
+from medleydb import load_all_multitracks
 from pitch_tracker.utils import files
 from pitch_tracker.utils.audio import load_audio_mono
 
@@ -40,6 +40,34 @@ def create_label_dict(label_folder: str) -> Dict[str, np.ndarray]:
     return result
 
 
+def create_audio_path_dict()->Dict[str, str]:
+    audio_path_dict = {}
+    mtracks = load_all_multitracks()
+    for mt in mtracks:
+        audio_path_dict[mt.track_id]=mt.mix_path
+    return audio_path_dict
+
+def create_label_path_dict(label_folder)->Dict[str,str]:
+    label_path_dict = {}
+    file_paths = files.list_file_paths_in_dir(label_folder)
+    for file_path in file_paths:
+        label_name = files.get_file_name(file_path, include_ext=False)
+        label_path_dict[label_name]=file_path
+    return label_path_dict
+
+
+def create_dataset_path_dict(label_folder)->Dict[str, Tuple[str,str]]:
+    dataset_paths = {}
+    audio_path_dict = create_audio_path_dict()
+    label_path_dict = create_label_path_dict(label_folder)
+
+    for label_name in label_path_dict.keys():
+        audio_path = audio_path_dict[label_name]
+        label_path = label_path_dict[label_name]
+        dataset_paths[label_name]=(label_path,audio_path)
+    return dataset_paths
+    
+
 def build_pick_features_and_time(
     STFT_features: np.ndarray,
     picking_frame_step:int,
@@ -65,18 +93,43 @@ def build_pick_features_and_time(
 
 
 
-def create_label_generator(note_messages: np.ndarray, ftimes, dist_threshold, empty_threshold, step_time):
-    for t_frame in ftimes:
+def create_label_generator(
+    note_messages: np.ndarray,
+    feature_times: np.ndarray,
+    dist_threshold: float,
+    empty_threshold: float,
+    onset_time_threshold: float,
+    picking_frame_size: int,
+    step_time: int,
+    n_class:int,
+    pre_midi_start:int=0):
+    
+    for t_frame in feature_times:
         stime = t_frame[0] - step_time
         etime = t_frame[-1] + step_time
+        
         note_messages_in_frame = _get_note_messages_in_frame(note_messages, stime, etime)
-        onset_labels = _get_onset_label(note_messages_in_frame, t_frame)
-        duration_labels = _get_duration_label(t_frame,
-                                              note_messages_in_frame,
-                                              onset_labels,
-                                              dist_threshold,
-                                              empty_threshold)
-        pitch_labels = _get_pitch_label(t_frame, note_messages_in_frame)
+        
+        onset_labels = _get_onset_label(
+            note_messages_in_frame,
+            t_frame,
+            picking_frame_size,
+            onset_time_threshold)
+        
+        duration_labels = _get_duration_label(
+            t_frame,
+            note_messages_in_frame,
+            onset_labels,
+            dist_threshold,
+            empty_threshold,
+            picking_frame_size)
+
+        pitch_labels = _get_pitch_label(
+            t_frame,
+            note_messages_in_frame,
+            picking_frame_size=picking_frame_size,
+            n_class=n_class,
+            pre_midi_start=pre_midi_start)
 
         yield [onset_labels, duration_labels, pitch_labels]
 
@@ -88,7 +141,7 @@ def extract_stft_feature(
     var:float=1.0) -> np.ndarray:
     
     stft_feature = librosa.stft(y=y, n_fft=n_fft, hop_length=hop_length)
-    log_compress = librosa.core.power_to_db(np.square(np.abs(stft_feature))).T
+    log_compress = librosa.core.power_to_db(np.square(np.abs(stft_feature)))
     return (log_compress - mean) / var
 
 def extract_melspectrogram_feature(
@@ -134,10 +187,6 @@ def extract_melspectrogram_feature(
             norm="slaney",
         )
         melspectrogram_feature = melspectrogram_extractor(y)
-        # TODO: use torchaudio.function.amplitude_to_DB to convert the mel-feature to DB scale.
-        # replace this:
-        # melspectrogram_feature = melspectrogram_feature.numpy()
-        # with
         log_compress = amplitude_to_DB(melspectrogram_feature, multiplier=10., amin=1e-10, db_multiplier=1.0)
     
     else:    
@@ -216,20 +265,20 @@ def _get_note_messages_in_frame(note_messages, stime, etime):
     return notes_in_frame
 
 def _get_onset_label(
-    notes_in_frame,
+    note_messages_in_frame:np.ndarray,
     t_frame,
     picking_frame_size,
     onset_time_threshold):
     
     onset_labels = np.zeros(picking_frame_size)
-    for of in notes_in_frame[:, 0]:
+    for of in note_messages_in_frame[:, 0]:
         diff = np.abs(of - t_frame)
         onset_idx = diff < onset_time_threshold
         onset_labels[onset_idx] = 1
 
     return onset_labels
 
-def _get_duration_label(t_frame, notes_in_frame, onset_labels, dist_threshold, empty_threshold, picking_frame_size):
+def _get_duration_label(t_frame, note_messages_in_frame, onset_labels, dist_threshold, empty_threshold, picking_frame_size):
     duration_labels = np.zeros(picking_frame_size)
     for i, t in enumerate(t_frame):
         if onset_labels[i]:
@@ -238,7 +287,7 @@ def _get_duration_label(t_frame, notes_in_frame, onset_labels, dist_threshold, e
         stime = t + dist_threshold
         etime = t - dist_threshold
         is_in_notes = np.flatnonzero(
-            (notes_in_frame[:, 0] <= stime) & (notes_in_frame[:, 1] >= etime))
+            (note_messages_in_frame[:, 0] <= stime) & (note_messages_in_frame[:, 1] >= etime))
         if is_in_notes.size > 0:
             duration_labels[i] = 1
 
@@ -249,16 +298,16 @@ def _get_duration_label(t_frame, notes_in_frame, onset_labels, dist_threshold, e
 
     return duration_labels
 
-def _get_pitch_label(t_frame, notes_in_frame, picking_frame_size, n_class, pre_midi_start):
+def _get_pitch_label(t_frame, note_messages_in_frame, picking_frame_size, n_class, pre_midi_start):
     pitch_labels = np.zeros((picking_frame_size, n_class))
     for i, t in enumerate(t_frame):
         idx = np.flatnonzero(
-                (notes_in_frame[:, 0] <= t) & (notes_in_frame[:, 1] > t))
+                (note_messages_in_frame[:, 0] <= t) & (note_messages_in_frame[:, 1] > t))
         if (idx.size > 0):
             last_label_idx = idx[-1]
-            NoteLvl = int(
-                    notes_in_frame[last_label_idx, 2] - pre_midi_start)
-            pitch_labels[i, NoteLvl] = 1
+            note_pitch = int(note_messages_in_frame[last_label_idx, 2] - pre_midi_start)
+            pitch_labels[i, note_pitch] = 1
         else:
             pitch_labels[i, 0] = 1
     return pitch_labels
+
