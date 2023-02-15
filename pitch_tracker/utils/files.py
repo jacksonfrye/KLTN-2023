@@ -16,6 +16,11 @@ def list_file_paths_in_dir(dir_path:str, include_ext=None):
     file_paths = (file_path for file_path in file_paths if os.path.isfile(file_path))
     return file_paths
 
+def list_folder_paths_in_dir(dir_path:str):
+    folder_paths = (os.path.join(dir_path, file_name) for file_name in os.listdir(dir_path))
+    folder_paths = (folder_path for folder_path in folder_paths if os.path.isdir(folder_path))
+    return folder_paths
+
 def save_pickle(obj, file_path, dir_path=None, is_overwrite=True):
     """Save the object to a pickled file, currently using pickle protocol 5
 

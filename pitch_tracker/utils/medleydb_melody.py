@@ -335,7 +335,7 @@ def write_melodies_to_csv_forked(mtrack, output_dir, melody1=None, melody2=None,
         melody1_fpath_txt = os.path.join(output_dir, 'Melody1_midi', mtrack.track_id+'.csv')
         if not os.path.exists(melody1_fpath_txt) or overwrite:
             os.makedirs(os.path.split(melody1_fpath_txt)[0], exist_ok=True)
-            with open(melody1_fpath_txt, "w") as fhandle:
+            with open(melody1_fpath_txt, "w", newline='') as fhandle:
                 writer = csv.writer(fhandle)
                 writer.writerows(melody1)
         else:
@@ -350,7 +350,7 @@ def write_melodies_to_csv_forked(mtrack, output_dir, melody1=None, melody2=None,
         if not os.path.exists(melody2_fpath_txt) or overwrite:
             os.makedirs(os.path.split(melody2_fpath_txt)[0], exist_ok=True)
 
-            with open(melody2_fpath_txt, "w") as fhandle:
+            with open(melody2_fpath_txt, "w", newline='') as fhandle:
                 writer = csv.writer(fhandle)
                 writer.writerows(melody2)
         else:
