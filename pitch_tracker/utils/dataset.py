@@ -1,19 +1,22 @@
 import csv
-from typing import Dict, Any, Tuple, Union
+from typing import Any, Dict, Tuple, Union
 
-import numpy as np
 import librosa
+import numpy as np
 import torch
-from torchaudio.transforms import MelSpectrogram
 from torchaudio.functional import amplitude_to_DB
-
+from torchaudio.transforms import MelSpectrogram
 
 from medleydb import load_all_multitracks
 from pitch_tracker.utils import files
 from pitch_tracker.utils.audio import load_audio_mono
 
+from pitch_tracker.utils.constants import PICKING_FRAME_SIZE, PRE_MIDI_START, ONSET_TIME_THRESHOLD
 
-def create_label_dict(label_folder: str) -> Dict[str, np.ndarray]:
+DIST_THRESHOLD = 0.1
+EMPTY_THRESHOLD = PICKING_FRAME_SIZE / 5
+
+def create_label_dict_from_dir(label_dir: str) -> Dict[str, np.ndarray]:
     """Creates a dictionary that maps label names to their corresponding note messages in numpy arrays.
 
     Args:
@@ -22,44 +25,64 @@ def create_label_dict(label_folder: str) -> Dict[str, np.ndarray]:
     Returns:
         dict: A dictionary that maps label names to their note messages as numpy arrays.
     """
-    result = {}
-    file_paths = files.list_file_paths_in_dir(label_folder)
+    label_dict = {}
+    file_paths = files.list_file_paths_in_dir(label_dir)
     for label_path in file_paths:
-        with open(label_path, 'r') as f:
-            csv_reader = csv.reader(f)
-            note_messages = []
-            for line in csv_reader:
-                stime = float(line[0])
-                etime = float(line[1])
-                pitch = float(line[2])
-                note_messages.append((stime, etime, pitch))
-        note_messages = np.asarray(note_messages, dtype=np.float32)
+        note_messages = read_label_file(label_path)
+        song_name = files.get_file_name(label_path, include_ext=False)
+        label_dict[song_name] = note_messages
+    return label_dict
 
-        label_name = files.get_file_name(label_path, include_ext=False)
-        result[label_name] = note_messages
-    return result
-
+# to be deprecated
+def create_label_dict_from_path_list(path_list):
+    label_dict = {}
+    for label_path in path_list:
+        note_messages = read_label_file(label_path)
+        song_name = files.get_file_name(label_path, include_ext=False)
+        label_dict[song_name] = note_messages
+    return label_dict
 
 def create_audio_path_dict()->Dict[str, str]:
+    """Return the MedleyDB Audio path as a dictionary, song_name: audio_mix_path
+
+    Returns:
+        Dict[str, str]: {song_name: audio_mix_path}
+    """
     audio_path_dict = {}
     mtracks = load_all_multitracks()
     for mt in mtracks:
         audio_path_dict[mt.track_id]=mt.mix_path
     return audio_path_dict
 
-def create_label_path_dict(label_folder)->Dict[str,str]:
+def create_label_path_dict(label_dir:str)->Dict[str,str]:
+    """Return a dictionary contain the song_name: label_path
+
+    Args:
+        label_folder (str): the path to the label directory.
+
+    Returns:
+        Dict[str,str]: {song_name: label_path}
+    """
     label_path_dict = {}
-    file_paths = files.list_file_paths_in_dir(label_folder)
+    file_paths = files.list_file_paths_in_dir(label_dir)
     for file_path in file_paths:
         label_name = files.get_file_name(file_path, include_ext=False)
         label_path_dict[label_name]=file_path
     return label_path_dict
 
 
-def create_dataset_path_dict(label_folder)->Dict[str, Tuple[str,str]]:
+def create_dataset_path_dict(label_dir:str)->Dict[str, Tuple[str,str]]:
+    """Return a dictionary contain the {song_name: (label_path, audio_mix_path)}
+
+    Args:
+        label_folder (str): the path to the label directory.
+
+    Returns:
+        Dict[str,str]: {song_name: label_path, audio_mix_path}
+    """
     dataset_paths = {}
     audio_path_dict = create_audio_path_dict()
-    label_path_dict = create_label_path_dict(label_folder)
+    label_path_dict = create_label_path_dict(label_dir)
 
     for label_name in label_path_dict.keys():
         audio_path = audio_path_dict[label_name]
@@ -102,7 +125,7 @@ def create_label_generator(
     picking_frame_size: int,
     step_time: int,
     n_class:int,
-    pre_midi_start:int=0):
+    pre_midi_start:int=PRE_MIDI_START):
     
     for t_frame in feature_times:
         stime = t_frame[0] - step_time
@@ -114,7 +137,8 @@ def create_label_generator(
             note_messages_in_frame,
             t_frame,
             picking_frame_size,
-            onset_time_threshold)
+            onset_time_threshold
+        )
         
         duration_labels = _get_duration_label(
             t_frame,
@@ -122,14 +146,16 @@ def create_label_generator(
             onset_labels,
             dist_threshold,
             empty_threshold,
-            picking_frame_size)
+            picking_frame_size
+        )
 
         pitch_labels = _get_pitch_label(
             t_frame,
             note_messages_in_frame,
             picking_frame_size=picking_frame_size,
             n_class=n_class,
-            pre_midi_start=pre_midi_start)
+            pre_midi_start=pre_midi_start
+        )
 
         yield [onset_labels, duration_labels, pitch_labels]
 
@@ -154,7 +180,7 @@ def extract_melspectrogram_feature(
     fmin:float=0.0,
     mean:float=0.0,
     var:float=1.0,
-    backend:str='librosa') -> Union[np.ndarray, torch.Tensor]:
+    backend:str='torch') -> Union[np.ndarray, torch.Tensor]:
     """extract the melspectrogram feature from the audio signal.
 
     Args:
@@ -202,15 +228,30 @@ def extract_melspectrogram_feature(
             fmax=None,
             n_mels=n_mels,
             power=2.0,
-            htk=True)
+            htk=True
+        )
         log_compress = librosa.power_to_db(melspectrogram_feature)
     return (log_compress - mean) / var
 
+def read_label_file(label_path:str):
+    with open(label_path, 'r') as f:
+        csv_reader = csv.reader(f)
+        note_messages = []
+        for line in csv_reader:
+            stime = float(line[0])
+            etime = float(line[1])
+            pitch = float(line[2])
+            note_messages.append((stime, etime, pitch))
+    note_messages = np.asarray(note_messages, dtype=np.float32)
+    return note_messages
+
+
 def create_feature_label_generator(
-    audio_dir:str, 
-    label_dir:str, 
+    dataset_path_dict:Dict[str, Tuple[str,str]], 
     sample_rate:int, 
     n_fft:int,
+    n_mels:int,
+    n_class:int,
     hop_length:int,
     picking_frame_step:int,
     picking_frame_size:int,
@@ -219,32 +260,55 @@ def create_feature_label_generator(
     dist_threshold:float,
     empty_threshold:float):
 
-    label_dict = create_label_dict(label_dir)
+    # label_paths = (label_path for label_path, _ in dataset_path_dict.values())
+    # audio_paths = (audio_path for _, audio_path in dataset_path_dict.values())
+    # label_dict = create_label_dict_from_path_list(label_paths)
 
-    for label_name in label_dict:
-        audio_path = files.get_full_path_by_file_name(audio_dir, label_name)
-        if audio_path is None:
-            print(f'No audio:{label_name}')
+    for label_name in dataset_path_dict:
+        label_path, audio_path = dataset_path_dict[label_name]
+        if not audio_path:
+            print(f'No audio: {label_name}')
             continue
+        note_messages = read_label_file(label_path)
 
-        end_time_label = label_dict[label_name][-1, 1] - 0.1
+        end_time_label = note_messages[-1, 1] - 0.1
         # logger.info(f'{label_name} end: {end_time_label}')
         
-        y, sr = load_audio_mono(audio_path, sample_rate)
-        eindex = int(end_time_label * sr)
+        try:
+            signal, sr = load_audio_mono(audio_path, sample_rate, keep_channel_dim=False)
+        except Exception as e:
+            print(f'Falied to load {label_name} - {e}')
+            continue
         
-        STFT_features = extract_stft_feature(y[:eindex], n_fft=n_fft, hop_length=hop_length)
+        eindex = int(end_time_label * sr)
+            
+        melspectrogram_features = extract_melspectrogram_feature(
+            signal[:eindex],
+            n_fft=n_fft,
+            hop_length=hop_length,
+            n_mels=n_mels,
+            backend='librosa'
+        )
 
-        pick_features, pick_times = build_pick_features_and_time(STFT_features,
-                                                                 picking_frame_step,
-                                                                 picking_frame_size,
-                                                                 step_frame,
-                                                                 step_time)
+        pick_features, pick_times = build_pick_features_and_time(
+            melspectrogram_features.T,
+            picking_frame_step,
+            picking_frame_size,
+            step_frame,
+            step_time
+        )
 
-        label_generator = create_label_generator(label_dict[label_name],
-                                                 pick_times,
-                                                 dist_threshold=dist_threshold,
-                                                 empty_threshold=empty_threshold)
+        label_generator = create_label_generator(
+            note_messages=note_messages,
+            feature_times=pick_times,
+            dist_threshold=dist_threshold,
+            empty_threshold=empty_threshold,
+            onset_time_threshold=ONSET_TIME_THRESHOLD,
+            picking_frame_size=picking_frame_size,
+            step_time=step_time,
+            n_class=n_class,
+            pre_midi_start=PRE_MIDI_START,
+        )
 
         feature_generator = (feature for feature in pick_features)
         

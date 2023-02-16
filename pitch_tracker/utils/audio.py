@@ -8,12 +8,38 @@ https://github.com/CPJKU/madmom/blob/main/madmom/audio/signal.py#L169
 
 """
 
+from typing import Tuple
+
 import torchaudio
 import torch
+import librosa
+import numpy as np
+
+def load_audio_mono(file_path: str, sample_rate: int, keep_channel_dim: bool = True) -> Tuple[np.ndarray, int]:
+    """Loads an audio file and returns a mono audio signal.
+
+    Args:
+        file_path (str): Path to the audio file.
+        sample_rate (int): The sample rate to load the audio file with.
+        keep_channel_dim (bool, optional): Whether to keep the channel dimension of the audio signal. Defaults to True.
+
+    Returns:
+        Tuple[np.ndarray, int]: A tuple containing the audio signal and sample rate.
+    """
+
+    try:
+        signal, sr = load_audio_with_torch(file_path, sample_rate, keep_channel_dim=keep_channel_dim)
+        signal = signal.numpy()
+    except:
+        print('Failed to load audio with `torchaudio`, fallback to `librosa`')
+        signal, sr = librosa.load(file_path, sr=sample_rate, mono=True)
+        if keep_channel_dim:
+            signal = np.expand_dims(signal, -1)
+
+    return signal, sr
 
 
-
-def load_audio_mono(file_path, sample_rate, keep_channel_dim=True):
+def load_audio_with_torch(file_path, sample_rate, keep_channel_dim=True):
     """Load the audio file with target sample rate, down mix to mono.
 
     Args:
