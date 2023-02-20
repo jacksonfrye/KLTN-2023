@@ -59,32 +59,40 @@ def save_pickle(obj, file_path, dir_path=None, is_overwrite=True):
     protocol = pickle.HIGHEST_PROTOCOL
     obj_file = Path(file_path)
 
-    if obj_file.is_file():
-        if is_overwrite:
-            with obj_file.open(mode='wb') as f:
-                pickle.dump(obj, f, protocol=protocol)
-            return obj_file
-        else:
-            obj_filename = obj_file.stem + '_' + datetime.now().strftime('%d%m%Y_%H%M%S') + \
-                obj_file.suffix
-            modified_obj_file = obj_file.with_name(obj_filename)
-            with modified_obj_file.open(mode='wb') as f:
-                pickle.dump(obj, f, protocol=protocol)
-            return modified_obj_file
-    # file_path not exists, get the valid parent directory,
-    # or check if file_path is a directory already or use the dir_path
-    obj_dir = obj_file if obj_file.is_dir() else (
-        obj_file.parent if obj_file.parent.is_dir() else Path(dir_path)
-    )
-    # get the name of file_path to be used as filename
-    obj_filename = obj_file.name if not obj_file.is_dir() else ''
-    if obj_dir.is_dir():
-        obj_filename = ('obj_' + datetime.now().strftime('%d%m%Y_%H%M%S') +
-                        '.pkl' if not obj_filename else obj_filename)
-        obj_file = obj_dir.joinpath(obj_filename)
+    os.makedirs(obj_file.parent.as_posix(),exist_ok=True)
+
+    if not obj_file.exists():
         with obj_file.open(mode='wb') as f:
             pickle.dump(obj, f, protocol=protocol)
         return obj_file
+    
+    if obj_file.exists() and is_overwrite:
+        with obj_file.open(mode='wb') as f:
+            pickle.dump(obj, f, protocol=protocol)
+        return obj_file
+    else:
+        print(f'{obj_file.name} is already existed.')
+        # obj_filename = obj_file.stem + '_' + datetime.now().strftime('%d%m%Y_%H%M%S') + \
+        #     obj_file.suffix
+        # modified_obj_file = obj_file.with_name(obj_filename)
+        # with modified_obj_file.open(mode='wb') as f:
+        #     pickle.dump(obj, f, protocol=protocol)
+        # return modified_obj_file
+    
+    # # file_path not exists, get the valid parent directory,
+    # # or check if file_path is a directory already or use the dir_path
+    # obj_dir = obj_file if obj_file.is_dir() else (
+    #     obj_file.parent if obj_file.parent.is_dir() else Path(dir_path)
+    # )
+    # # get the name of file_path to be used as filename
+    # obj_filename = obj_file.name if not obj_file.is_dir() else ''
+    # if obj_dir.is_dir():
+    #     obj_filename = ('obj_' + datetime.now().strftime('%d%m%Y_%H%M%S') +
+    #                     '.pkl' if not obj_filename else obj_filename)
+    #     obj_file = obj_dir.joinpath(obj_filename)
+    #     with obj_file.open(mode='wb') as f:
+    #         pickle.dump(obj, f, protocol=protocol)
+    #     return obj_file
     return None
 
 def load_pickle(file_path):

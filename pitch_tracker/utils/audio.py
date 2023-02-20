@@ -15,6 +15,7 @@ import torch
 import librosa
 import numpy as np
 
+
 def load_audio_mono(file_path: str, sample_rate: int, keep_channel_dim: bool = True) -> Tuple[np.ndarray, int]:
     """Loads an audio file and returns a mono audio signal.
 
@@ -28,10 +29,11 @@ def load_audio_mono(file_path: str, sample_rate: int, keep_channel_dim: bool = T
     """
 
     try:
-        signal, sr = load_audio_with_torch(file_path, sample_rate, keep_channel_dim=keep_channel_dim)
+        signal, sr = load_audio_with_torch(
+            file_path, sample_rate, keep_channel_dim=keep_channel_dim)
         signal = signal.numpy()
-    except:
-        print('Failed to load audio with `torchaudio`, fallback to `librosa`')
+    except Exception as e:
+        print(f'Failed to load audio with `torchaudio`, fallback to `librosa` {e}')
         signal, sr = librosa.load(file_path, sr=sample_rate, mono=True)
         if keep_channel_dim:
             signal = np.expand_dims(signal, -1)
@@ -50,7 +52,7 @@ def load_audio_with_torch(file_path, sample_rate, keep_channel_dim=True):
     Return:
         torch.Tensor: Audio array, [n_channels, n_samples] or [n_samples]
         int: sample rate 
-    """    
+    """
     signal, sr = torchaudio.load(file_path, channels_first=False)
     # resampling
     if sr != sample_rate:
@@ -62,6 +64,7 @@ def load_audio_with_torch(file_path, sample_rate, keep_channel_dim=True):
     if keep_channel_dim:
         signal = torch.unsqueeze(signal, 0)
     return signal, sr
+
 
 def resample(signal, old_sr, new_sr):
     resampler = torchaudio.transforms.Resample(old_sr, new_sr)
@@ -116,6 +119,6 @@ def remix_torch(signal, num_channels):
         return torch.tile(signal[:, None], num_channels)
     else:
         # any other channel conversion is not supported
-        raise NotImplementedError("Requested %d channels, but got %d channels "
-                                  "and channel conversion is not implemented."
-                                  % (num_channels, signal.shape[1]))
+        raise NotImplementedError((
+            f"Requested {num_channels} channels, but got {signal.shape[1]} channels "
+            "and channel conversion is not implemented."))
