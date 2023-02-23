@@ -1,10 +1,11 @@
-import os
 import csv
-from typing import Any, Dict, Generator, List, Tuple, Union
+import os
+from typing import Dict, Generator, List, Tuple, Union
 
 import librosa
 import numpy as np
 import torch
+from torch.utils.data import Dataset
 from torchaudio.functional import amplitude_to_DB
 from torchaudio.transforms import MelSpectrogram
 
@@ -13,11 +14,56 @@ from medleydb import load_all_multitracks
 from pitch_tracker.utils.audio import load_audio_mono
 from pitch_tracker.utils.constants import (ONSET_TIME_THRESHOLD,
                                            PICKING_FRAME_SIZE, PRE_MIDI_START)
-
-from pitch_tracker.utils.files import list_file_paths_in_dir, get_file_name, save_pickle
+from pitch_tracker.utils.files import (get_file_name, list_file_paths_in_dir,
+                                       load_pickle, save_pickle)
 
 DIST_THRESHOLD = 0.1
 EMPTY_THRESHOLD = PICKING_FRAME_SIZE / 5
+
+
+class AudioDataset(Dataset):
+    """
+    A class to create an audio dataset by inheriting from the PyTorch Dataset class.
+
+    Args:
+        dataset_dir (str): Path to the directory containing audio files.
+        
+    Methods:
+        len(self): Returns the length of the dataset.
+        getitem(self, idx): Gets a sample from the dataset based on an index.
+            _build_dataset_path_list(self, dataset_dir:str) -> list:
+            Builds a list of file paths in the provided dataset directory.
+
+    Returns:
+        A dataset instance that can be used with PyTorch DataLoader.
+
+    Example:
+        dataset = AudioDataset(dataset_dir='./audio_files')
+        dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
+    """
+    def __init__(self, dataset_dir: str, transform=None, target_transform=None):
+        self.dataset_path_list: list = self._build_dataset_path_list(dataset_dir)
+        self.transform = transform
+        self.target_transform = target_transform
+
+    def __len__(self):
+        return len(self.dataset_path_list)
+
+    def __getitem__(self, idx):
+        data_path = self.dataset_path_list[idx]
+        feature, label = load_pickle(data_path)
+        
+        return feature, tuple(label)
+    
+    def _build_dataset_path_list(self, dataset_dir:str) -> list:
+        list_of_files = []
+        tmp = os.walk(dataset_dir)
+        next(tmp)
+        for root, ds, fs in tmp:
+            list_of_files.extend([os.path.join(root, f) for f in fs])
+        
+        return list_of_files
+
 
 
 def create_label_dict_from_dir(label_dir: str) -> Dict[str, np.ndarray]:
@@ -513,3 +559,5 @@ def _get_pitch_label(
         else:
             pitch_labels[i, 0] = 1
     return pitch_labels
+
+
