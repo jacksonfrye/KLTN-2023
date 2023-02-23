@@ -1,8 +1,12 @@
-import pickle
-from pathlib import Path
-from datetime import datetime
-import os
 import csv
+import functools
+import operator
+import os
+import pickle
+from datetime import datetime
+from pathlib import Path
+from typing import Tuple
+
 
 def get_file_name(file_path:str, include_ext:bool=False):
     _, file_name_with_ext = os.path.split(file_path)
@@ -20,6 +24,19 @@ def list_folder_paths_in_dir(dir_path:str):
     folder_paths = (os.path.join(dir_path, file_name) for file_name in os.listdir(dir_path))
     folder_paths = (folder_path for folder_path in folder_paths if os.path.isdir(folder_path))
     return folder_paths
+
+def list_all_file_paths_in_dir(dir_path:str, skip_level:int=0, exts:Tuple[str]=('')):
+    list_file_paths = []
+    path_generator = os.walk(dir_path)
+    for _ in range(skip_level):
+        next(path_generator)
+    for root, ds, fs in path_generator:
+        list_file_paths.extend([os.path.join(root, f) for f in fs if f.endswith(exts)])
+    
+    return list_file_paths
+
+def flatten_list(a:list):
+    return functools.reduce(operator.concat, a)
 
 def save_pickle(obj, file_path, dir_path=None, is_overwrite=True):
     """Save the object to a pickled file, currently using pickle protocol 5
