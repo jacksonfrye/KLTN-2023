@@ -335,7 +335,7 @@ def create_feature_label_generator(
 
 def write_feature_label_to_disk(feature_label_generator: Generator, output_dir: str, is_overwrite: bool = True) -> List[str]:
     """
-    Writes feature and label pairs to disk as pickle files.
+    Writes feature and label pairs to disk as pickle files by song. Output <song_name>.pkl.
 
     Args:
         feature_label_generator (Generator): A generator that yields tuples of (label, feature_label_pairs).
@@ -377,6 +377,70 @@ def write_feature_label_to_disk(feature_label_generator: Generator, output_dir: 
         label_batch['pitch'] = np.array(pitches)
         save_pickle([feature_batch, label_batch],
                     output_path, is_overwrite=is_overwrite)
+        passed_files.append(label_name)
+    return passed_files
+
+def write_feature_label_to_disk_by_frame(
+    feature_label_generator: Generator,
+    output_dir: str,
+    is_overwrite: bool = True,
+    categorize_by_subdir:bool=False) -> List[str]:
+    """
+    Writes feature and label pairs to disk as pickle files by frame.
+    Output <song_name>.pkl.
+
+    Args:
+        feature_label_generator (Generator): A generator that yields tuples of (label, feature_label_pairs).
+        output_dir (str): The directory to save the pickle files.
+        is_overwrite (bool, optional): If True, overwrite the file if it already exists. Defaults to True.
+        categorize_by_subdir (bool, optional): If True, create a sub-directory to contain the feature & label for each song. Defaults to False.
+    Returns:
+        List[str]: A list of the passed files.
+
+    Raises:
+        IOError: If the output directory does not exist.
+
+    Example:
+        feature_label_generator = get_feature_label_generator()
+        output_dir = './data'
+        write_feature_label_to_disk(feature_label_generator, output_dir)
+    """
+
+    # TODO: fix output path so the function save each frame as a pickle file.
+    passed_files = []
+    for label_name, feature_label_pair in feature_label_generator:
+        
+        song_dir = output_dir
+        if categorize_by_subdir:
+            song_dir = os.path.join(output_dir, label_name)
+            os.makedirs(song_dir, exist_ok=True)
+        
+
+        # feature_batch = []
+        # label_batch = {}
+        # onsets = []
+        # durations = []
+        # pitches = []
+        for i, (feature, label) in enumerate(feature_label_pair):
+            output_path = os.path.join(song_dir, f'{label_name}_{i}.pkl')
+            if os.path.exists(output_path) and not is_overwrite:
+                print(f'{output_path} already existed, skipping.')
+                continue
+            save_pickle(
+                [feature, label],
+                output_path,
+                is_overwrite=is_overwrite)
+
+        #     feature_batch.append(feature)
+        #     onsets.append(onset)
+        #     durations.append(duration)
+        #     pitches.append(pitch)
+        # feature_batch = np.array(feature_batch)
+        # label_batch['onset'] = np.array(onsets)
+        # label_batch['duration'] = np.array(durations)
+        # label_batch['pitch'] = np.array(pitches)
+        # save_pickle([feature_batch, label_batch],
+        #             output_path, is_overwrite=is_overwrite)
         passed_files.append(label_name)
     return passed_files
 
