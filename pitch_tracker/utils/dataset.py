@@ -50,7 +50,11 @@ class AudioDataset(Dataset):
     def __getitem__(self, idx):
         data_path = self.dataset_path_list[idx]
         feature, label = load_pickle(data_path)
-        
+        if type(feature) == np.ndarray:
+            feature = torch.from_numpy(feature)
+        feature = feature.type(torch.float32)
+        feature = feature.unsqueeze(0)
+        label = [torch.from_numpy(l).type(torch.int) for l in label]
         return feature, tuple(label)
 
     def _build_dataset_path_list(self, dataset_dir_by_song)->list:
