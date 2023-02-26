@@ -54,7 +54,7 @@ class AudioDataset(Dataset):
             feature = torch.from_numpy(feature)
         feature = feature.type(torch.float32)
         feature = feature.unsqueeze(0)
-        label = [torch.from_numpy(l).type(torch.int) for l in label]
+        label = [torch.from_numpy(l).type(torch.float32) for l in label]
         return feature, tuple(label)
 
     def _build_dataset_path_list(self, dataset_dir_by_song)->list:
@@ -551,6 +551,9 @@ def _get_pitch_label(
             (note_messages_in_frame[:, 0] <= t) & (note_messages_in_frame[:, 1] > t))
         if (idx.size > 0):
             last_label_idx = idx[-1]
+
+            # original pitch values are substract with `pre_midi_start`
+            # so they start from 0 and become the indices
             note_pitch = int(
                 note_messages_in_frame[last_label_idx, 2] - pre_midi_start)
             pitch_labels[i, note_pitch] = 1
