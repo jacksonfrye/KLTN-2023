@@ -34,13 +34,11 @@ class NeuralNetwork(nn.Module):
             conv2d_input=(256,210,3),
             maxpool_kernel_size=3,
         )
-        # self.unflatten_layer = nn.Unflatten(1, (210,-1))
-        # self.reshape_layer = partial(torch.reshape, shape=(8,210,-1))
+        
         self.flatten_layer = torch.nn.Flatten(2)
-        self.dense_layer = nn.LazyLinear(128)
+        self.dense_layer = nn.Linear(74, 128)
         self.output_layer = nn.Linear(128, 88)
-        # self.softmax_layer = nn.Softmax(0)
-
+        
     def forward(self, x):
         x = self.conv2d_block1(x)
         x = self.conv2d_block2(x)
