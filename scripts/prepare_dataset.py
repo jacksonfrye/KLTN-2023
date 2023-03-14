@@ -3,7 +3,7 @@ import sys
 
 SRC_PATH = os.path.join(os.path.dirname(__file__), '../')
 MEDLEYDB_PATH = os.path.join(SRC_PATH, 'medleydb')
-DATASET_DIR = '../content/pickled_database/'
+DATASET_DIR = f'{SRC_PATH}/content/pickled_database/'
 sys.path.extend([SRC_PATH, MEDLEYDB_PATH])
 
 import numpy as np

@@ -4,7 +4,7 @@ import sys
 
 SRC_PATH = os.path.join(os.path.dirname(__file__), '../')
 MEDLEYDB_PATH = os.path.join(SRC_PATH, 'medleydb')
-DATASET_DIR = '../content/pickled_database/'
+DATASET_DIR = f'{SRC_PATH}/content/pickled_database/'
 sys.path.extend([SRC_PATH, MEDLEYDB_PATH])
 
 import argparse
@@ -65,11 +65,12 @@ def main():
     try:
         with open(args.config, 'r') as f:
             p = yaml.safe_load(f)
+        p['device'] = DEVICE if p['device'] == 'DEVICE' else p['device']
     except:
         print('Cannot find the config path, using hardcoded config')
         p = {
             # dataset
-            'batch_size': 8,
+            'batch_size': 4,
             # fit
             'n_epochs': 5,
             'learning_rate': 1e-3,
