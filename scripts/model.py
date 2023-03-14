@@ -7,6 +7,9 @@ MEDLEYDB_PATH = os.path.join(SRC_PATH, 'medleydb')
 DATASET_DIR = '../content/pickled_database/'
 sys.path.extend([SRC_PATH, MEDLEYDB_PATH])
 
+import argparse
+import yaml
+
 import torch
 from sklearn.model_selection import train_test_split
 from torch import nn
@@ -51,24 +54,36 @@ def prepare_dataset():
 
     return train_dataset, validation_dataset, test_dataset
 
-
 def main():
-    p = {
-        # dataset
-        'batch_size': 8,
-        # fit
-        'n_epochs': 5,
-        'learning_rate': 1e-3,
-        # early stopping
-        'es_patience': 10,
-        'es_verbose': True,
-        'es_dir_path': './checkpoints',
-        # lr scheduler
-        'ls_patience': 8,
-        'ls_factor': 0.2,
-        # misc
-        'device': DEVICE,
-    }
+    # Parse command line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--config', type=str, default=f'{SRC_PATH}/scripts/config/model_config.yml',
+                        help='Path to the config file in .yml format')
+    args = parser.parse_args()
+
+    # Load config from file
+    try:
+        with open(args.config, 'r') as f:
+            p = yaml.safe_load(f)
+    except:
+        print('Cannot find the config path, using hardcoded config')
+        p = {
+            # dataset
+            'batch_size': 8,
+            # fit
+            'n_epochs': 5,
+            'learning_rate': 1e-3,
+            # early stopping
+            'es_patience': 10,
+            'es_verbose': True,
+            'es_dir_path': './checkpoints',
+            # lr scheduler
+            'ls_patience': 8,
+            'ls_factor': 0.2,
+            # misc
+            'device': DEVICE,
+        }
+
 
     # prepare dataset & dataloader
     train_dataset, validation_dataset, test_dataset = prepare_dataset()
@@ -84,7 +99,6 @@ def main():
         shuffle=True
     )
     
-    # test_dataloader = DataLoader(test_dataset)
     # BCE loss doesn't work well.
     loss_fn = nn.CrossEntropyLoss().to(p['device'])
     model = Audio_CNN().to(p['device'])
@@ -116,7 +130,6 @@ def main():
         lr_scheduler=lr_scheduler,
         device=p['device'],
     )
-
 
 
 if __name__ == '__main__':

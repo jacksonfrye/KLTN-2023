@@ -133,7 +133,7 @@ def train_model(
         trace_func (optional): A function used for logging. Defaults to print.
 
     Returns:
-         Tuple[Model, List[float], List[float]]: A tuple containing the trained model and lists of average training and validation losses per epoch.
+         Tuple[Model, List[float], List[float]]: A tuple containing the latest trained model and lists of average training and validation losses per epoch.
     """
     # logging history
     avg_train_losses = []
@@ -161,13 +161,10 @@ def train_model(
         if early_stopping:
             early_stopping(avg_validation_loss, model)
             if early_stopping.early_stop:
-                print("Early stopping")
+                trace_func("Early stopping")
                 break
 
         if lr_scheduler:
             lr_scheduler.step(avg_validation_loss)
-
-    # load the last checkpoint with the best model
-    model.load_state_dict(torch.load('checkpoint.pt'))
 
     return model, avg_train_losses, avg_validation_losses

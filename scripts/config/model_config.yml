@@ -1,0 +1,9 @@
+batch_size: 8
+n_epochs: 5
+learning_rate: 0.001
+es_patience: 10
+es_verbose: true
+es_dir_path: ./checkpoints
+ls_patience: 8
+ls_factor: 0.2
+device: DEVICE # Replace DEVICE with the actual device name (e.g., 'cpu' or 'cuda')
