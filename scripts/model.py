@@ -17,7 +17,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 
 from pitch_tracker.ml.earlystopping import EarlyStopping
-from pitch_tracker.ml.model.net import Audio_CNN
+from pitch_tracker.ml.model.net import Audio_CNN, Audio_CRNN
 from pitch_tracker.ml.train_model import train_model
 from pitch_tracker.utils import files
 from pitch_tracker.utils.dataset import AudioDataset
@@ -102,7 +102,7 @@ def main():
     
     # BCE loss doesn't work well.
     loss_fn = nn.CrossEntropyLoss().to(p['device'])
-    model = Audio_CNN().to(p['device'])
+    model = Audio_CRNN().to(p['device'])
     print(model)
 
     optimizer = torch.optim.Adam(
