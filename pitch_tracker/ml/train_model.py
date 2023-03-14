@@ -2,6 +2,7 @@ from typing import Tuple
 import numpy as np
 import torch
 from pitch_tracker.ml.earlystopping import EarlyStopping
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 # Manually set seed for reproducibility
 SEED = 1
@@ -11,7 +12,25 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
 
 
-def train(model, dataloader, loss_fn, optimizer, device: str) -> Tuple[float, float]:
+def train(
+        model,
+        dataloader,
+        loss_fn,
+        optimizer,
+        device: str
+    ) -> Tuple[float, float]:
+    """Trains a model on a given dataset for one epoch.
+
+    Args:
+        model: The model to be trained.
+        dataloader: The dataloader for the training dataset.
+        loss_fn: The loss function to be used during training.
+        optimizer: The optimizer to be used during training.
+        device (str): The device on which to run the training.
+
+    Returns:
+         Tuple[float, float]: A tuple containing the average loss and average accuracy of the model on the training dataset for one epoch.
+    """
     total_batches = len(dataloader)
     total_target_size = 0
     running_loss = 0
@@ -49,7 +68,23 @@ def train(model, dataloader, loss_fn, optimizer, device: str) -> Tuple[float, fl
     return avg_loss, avg_accuracy
 
 
-def test(model, dataloader, loss_fn, device: str) -> Tuple[float, float]:
+def test(
+        model,
+        dataloader,
+        loss_fn,
+        device: str
+    ) -> Tuple[float, float]:
+    """Tests a model on a given dataset.
+
+    Args:
+        model: The model to be tested.
+        dataloader: The dataloader for the test dataset.
+        loss_fn: The loss function to be used during testing.
+        device (str): The device on which to run the test.
+
+    Returns:
+        Tuple[float, float]: A tuple containing the average loss and average accuracy of the model on the test dataset.
+    """
     num_batches = len(dataloader)
     n_size = 0
     running_loss = 0
@@ -78,36 +113,59 @@ def train_model(
         validation_dataloader,
         loss_fn,
         optimizer,
-        patience: int,
-        n_epochs: int,
-        device: str = 'cpu'):
-    
+        n_epochs:int,
+        early_stopping: EarlyStopping = None,
+        lr_scheduler=None,
+        device: str = 'cpu',
+        trace_func=print):
+    """Trains a model on a given dataset.
+
+    Args:
+        model: The model to be trained.
+        train_dataloader: The dataloader for the training dataset.
+        validation_dataloader: The dataloader for the validation dataset.
+        loss_fn: The loss function to be used during training.
+        optimizer: The optimizer to be used during training.
+        n_epochs (int): The number of epochs to train for.
+        early_stopping (EarlyStopping, optional): An instance of EarlyStopping. Defaults to None.
+        lr_scheduler (optional): A learning rate scheduler. Defaults to None.
+        device (str, optional): The device on which to run the training. Defaults to 'cpu'.
+        trace_func (optional): A function used for logging. Defaults to print.
+
+    Returns:
+         Tuple[Model, List[float], List[float]]: A tuple containing the trained model and lists of average training and validation losses per epoch.
+    """
     # logging history
     avg_train_losses = []
     avg_train_accuracies = []
     avg_validation_losses = []
     avg_validation_accuracies = []
 
-    early_stopping = EarlyStopping(patience=patience, verbose=True)
-
     for epoch in range(1, n_epochs + 1):
+        trace_func(f"Epoch {epoch}\n-------------------------------")
 
         avg_train_loss, avg_train_accuracy = train(
             model, train_dataloader, loss_fn, optimizer, device)
 
         avg_validation_loss, avg_validation_accuracy = test(
-            model, validation_dataloader, loss_fn, optimizer, device)
-        
-        # calculate average loss over an epoch
+            model, validation_dataloader, loss_fn, device)
+
+        # save avg loss & accuracy
         avg_train_losses.append(avg_train_loss)
+        avg_train_accuracies.append(avg_train_accuracy)
         avg_validation_losses.append(avg_validation_loss)
+        avg_validation_accuracies.append(avg_validation_accuracy)
 
         # early_stopping needs the validation loss to check if it has decresed,
         # and if it has, it will make a checkpoint of the current model
-        early_stopping(avg_validation_loss, model)
-        if early_stopping.early_stop:
-            print("Early stopping")
-            break
+        if early_stopping:
+            early_stopping(avg_validation_loss, model)
+            if early_stopping.early_stop:
+                print("Early stopping")
+                break
+
+        if lr_scheduler:
+            lr_scheduler.step(avg_validation_loss)
 
     # load the last checkpoint with the best model
     model.load_state_dict(torch.load('checkpoint.pt'))

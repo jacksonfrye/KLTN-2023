@@ -17,9 +17,9 @@ from pitch_tracker.utils.constants import (F_MIN, HOP_LENGTH, N_CLASS, N_FFT,
 from pitch_tracker.utils.dataset import AudioDataset
 
 
-class NeuralNetwork(nn.Module):
+class Audio_CNN(nn.Module):
     def __init__(self):
-        super(NeuralNetwork, self).__init__()
+        super(Audio_CNN, self).__init__()
         self.conv2d_block1 = create_conv2d_block(
             conv2d_input=(1,256,3),
             maxpool_kernel_size=3,
@@ -43,18 +43,29 @@ class NeuralNetwork(nn.Module):
         x = self.conv2d_block1(x)
         x = self.conv2d_block2(x)
         x = self.conv2d_block3(x)
-        # x = self.unflatten_layer(x)
-        # x = self.reshape_layer(x)
         x = self.flatten_layer(x)
         x = self.dense_layer(x)
         x = self.output_layer(x)
-        # x = self.softmax_layer(x)
 
         return x
-
+    
 def create_conv2d_block(
         conv2d_input: Tuple[int,int,Union[Tuple[int,int], int]],
-        maxpool_kernel_size: Union[Tuple[int,int], int, None],):
+        maxpool_kernel_size: Union[Tuple[int,int], int, None],) -> nn.Sequential:
+    """
+    Creates a 2D convolutional block with ReLU activation and batch normalization.
+
+    Args:
+        conv2d_input (tuple): A tuple containing the number of input channels,
+            the number of output channels and the kernel size for the 2D convolutional layer.
+            The kernel size can be an integer or a tuple of two integers.
+        maxpool_kernel_size (int or tuple or None): The size of the window to take a max over for
+            the MaxPool2d layer. Can be an integer or a tuple of two integers. If None,
+            no MaxPool2d layer is added to the block.
+
+    Returns:
+        nn.Sequential: A sequential container that holds all layers in the block.
+    """
     in_channels, out_channels, (kernel_size) = conv2d_input
     
     conv2d = nn.Conv2d(in_channels, out_channels, kernel_size)
