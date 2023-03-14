@@ -1,4 +1,4 @@
-# mono_pitch_tracker | <a href="https://colab.research.google.com/github/duotien/mono_pitch_tracker/blob/main/mono_pitch_tracker.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab" height=30/></a>
+# mono_pitch_tracker | <a href="https://colab.research.google.com/github/duotien/mono_pitch_tracker/blob/main/notebooks/mono_pitch_tracker.ipynb" target="_parent"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab" height=30/></a>
 
 A data driven mono pitch tracker
 
