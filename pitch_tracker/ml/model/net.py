@@ -75,7 +75,8 @@ class Audio_CRNN(nn.Module):
             input_size=74,
             hidden_size=64,
             batch_first=True,
-            dropout=0.2
+            dropout=0.2,
+            bidirectional=True
         )
         self.dense_layer = nn.LazyLinear(128)
         self.output_layer = nn.LazyLinear(88)
@@ -95,7 +96,8 @@ class Audio_CRNN(nn.Module):
 
 def create_conv2d_block(
         conv2d_input: Tuple[int, int,Union[Tuple[int,int], int]],
-        maxpool_kernel_size: Union[Tuple[int, int], int, None],
+        padding: Union[Tuple[int,int], int, str] = 0,
+        maxpool_kernel_size: Union[Tuple[int, int], int, None] = None,
         ) -> nn.Sequential:
     """
     Creates a 2D convolutional block with ReLU activation and batch normalization.
@@ -104,16 +106,22 @@ def create_conv2d_block(
         conv2d_input (tuple): A tuple containing the number of input channels,
             the number of output channels and the kernel size for the 2D convolutional layer.
             The kernel size can be an integer or a tuple of two integers.
+        padding (int or tuple or str): The padding value. Can take 'valid'
+            (similar to no padding/0) or 'same'. Default to 0.
         maxpool_kernel_size (int or tuple or None): The size of the window to take a max over for
             the MaxPool2d layer. Can be an integer or a tuple of two integers. If None,
-            no MaxPool2d layer is added to the block.
+            no MaxPool2d layer is added to the block. Default to None.
 
     Returns:
         nn.Sequential: A sequential container that holds all layers in the block.
     """
     in_channels, out_channels, (kernel_size) = conv2d_input
 
-    conv2d = nn.Conv2d(in_channels, out_channels, kernel_size)
+    conv2d = nn.Conv2d(
+        in_channels,
+        out_channels,
+        kernel_size,
+        padding=padding)
     relu = nn.ReLU()
     batch_norm = nn.BatchNorm2d(out_channels)
     maxpool_2d = nn.MaxPool2d(

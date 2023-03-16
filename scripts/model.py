@@ -11,6 +11,7 @@ import argparse
 import yaml
 
 import torch
+from torchinfo import summary
 from sklearn.model_selection import train_test_split
 from torch import nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -103,7 +104,9 @@ def main():
     # BCE loss doesn't work well.
     loss_fn = nn.CrossEntropyLoss().to(p['device'])
     model = Audio_CRNN().to(p['device'])
-    print(model)
+    dummy_in, _ = train_dataset.__getitem__(0)
+    summary(model, input_size=dummy_in.shape)
+    del dummy_in
 
     optimizer = torch.optim.Adam(
         model.parameters(),
