@@ -39,10 +39,11 @@ class AudioDataset(Dataset):
         dataset = AudioDataset(dataset_dir='./audio_files')
         dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
     """
-    def __init__(self, dataset_dir_by_song: list, transform=None, target_transform=None):
+    def __init__(self, dataset_dir_by_song: list, transform=None, target_transform=None, channel_last:bool=False):
         self.dataset_path_list: list = self._build_dataset_path_list(dataset_dir_by_song)
         self.transform = transform
         self.target_transform = target_transform
+        self.channel_last:bool = channel_last
 
     def __len__(self):
         return len(self.dataset_path_list)
@@ -53,7 +54,12 @@ class AudioDataset(Dataset):
         if type(feature) == np.ndarray:
             feature = torch.from_numpy(feature)
         feature = feature.type(torch.float32)
-        feature = feature.unsqueeze(0)
+
+        if self.channel_last:
+            feature = feature.unsqueeze(-1)
+        else:
+            feature = feature.unsqueeze(0)
+
         label = [torch.from_numpy(l).type(torch.float32) for l in label]
         return feature, tuple(label)
 

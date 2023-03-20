@@ -177,3 +177,4 @@ def conv2d_output_shape(
               (kernel_size[1]-1) - 1) / stride[1] + 1)
 
     return h, w
+

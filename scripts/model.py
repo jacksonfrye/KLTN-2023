@@ -18,7 +18,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 
 from pitch_tracker.ml.earlystopping import EarlyStopping
-from pitch_tracker.ml.model.net import Audio_CNN, Audio_CRNN
+from pitch_tracker.ml.net import Audio_CNN, Audio_CRNN
 from pitch_tracker.ml.train_model import train_model
 from pitch_tracker.utils import files
 from pitch_tracker.utils.dataset import AudioDataset
@@ -120,7 +120,8 @@ def main():
     lr_scheduler = ReduceLROnPlateau(
         optimizer=optimizer,
         patience=p['ls_patience'],
-        factor=p['ls_factor']
+        factor=p['ls_factor'],
+        verbose=True,
     )
 
     train_model(
