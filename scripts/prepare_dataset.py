@@ -14,11 +14,11 @@ import pandas as pd
 import medleydb
 from pitch_tracker.utils import dataset
 from pitch_tracker.utils.audio import load_audio_mono
-from pitch_tracker.utils.constants import (F_MIN, stft_hop_size, N_CLASS, N_FFT,
+from pitch_tracker.utils.constants import (F_MIN, HOP_LENGTH, N_CLASS, N_FFT,
                                            N_MELS, PICKING_FRAME_SIZE,
                                            PICKING_FRAME_STEP,
                                            PICKING_FRAME_TIME, SAMPLE_RATE,
-                                           step_frame, STEP_TIME, WIN_LENGTH)
+                                           STEP_FRAME, STEP_TIME, WIN_LENGTH)
 from pitch_tracker.utils.files import (get_file_name, list_file_paths_in_dir,
                                        list_folder_paths_in_dir)
 from pitch_tracker.utils.medleydb_melody import gen_label
