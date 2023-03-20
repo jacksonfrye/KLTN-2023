@@ -18,7 +18,7 @@ from pitch_tracker.utils.constants import (F_MIN, HOP_LENGTH, N_CLASS, N_FFT,
 from pitch_tracker.utils.dataset import AudioDataset
 
 
-class Audio_CNN(nn.Module):
+class Audio_CNN_512_5(nn.Module):
     def __init__(self):
         super(Audio_CNN, self).__init__()
         self.conv2d_block1 = create_conv2d_block(
@@ -51,7 +51,7 @@ class Audio_CNN(nn.Module):
         return x
 
 
-class Audio_CRNN(nn.Module):
+class Audio_CRNN_512_5(nn.Module):
     def __init__(self):
         super(Audio_CRNN, self).__init__()
         self.conv2d_block1 = create_conv2d_block(
