@@ -1,26 +1,13 @@
 from collections import OrderedDict
-from functools import partial
 from typing import Tuple, Union
 from math import floor
 
 import torch
-import torchaudio
-from sklearn.model_selection import train_test_split
 from torch import nn
-from torch.utils.data import DataLoader, Dataset
-
-from pitch_tracker.utils import dataset, files
-from pitch_tracker.utils.constants import (F_MIN, HOP_LENGTH, N_CLASS, N_FFT,
-                                           N_MELS, PICKING_FRAME_SIZE,
-                                           PICKING_FRAME_STEP,
-                                           PICKING_FRAME_TIME, SAMPLE_RATE,
-                                           STEP_FRAME, STEP_TIME, WIN_LENGTH)
-from pitch_tracker.utils.dataset import AudioDataset
-
 
 class Audio_CNN_512_5(nn.Module):
     def __init__(self):
-        super(Audio_CNN, self).__init__()
+        super(Audio_CNN_512_5, self).__init__()
         self.conv2d_block1 = create_conv2d_block(
             conv2d_input=(1, 256, 3),
             maxpool_kernel_size=3,
@@ -53,7 +40,7 @@ class Audio_CNN_512_5(nn.Module):
 
 class Audio_CRNN_512_5(nn.Module):
     def __init__(self):
-        super(Audio_CRNN, self).__init__()
+        super(Audio_CRNN_512_5, self).__init__()
         self.conv2d_block1 = create_conv2d_block(
             conv2d_input=(1, 256, 3),
             maxpool_kernel_size=3,

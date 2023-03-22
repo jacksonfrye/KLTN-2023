@@ -431,29 +431,32 @@ def gen_label(track_id, output_dir, fs=FS, hop=HOP, overwrite=False, convert_to_
     mtrack = medleydb.MultiTrack(track_id)
     melody1 = create_melody1_annotation(mtrack,fs,hop)
     
-    if mtrack.is_instrumental == False and melody1 is not None:
-        melody1_nz = compute_end_time_stamps(melody1, convert_to_midi, round_method)
-    else:
-        melody1_nz = None
+    with np.errstate(divide='ignore'):
 
-    melody2 = create_melody2_annotation(mtrack,fs,hop)
-    if melody2 is not None:
-        melody2_nz = compute_end_time_stamps(melody2, convert_to_midi, round_method)
-    else:
-        melody2_nz = None
+        if mtrack.is_instrumental == False and melody1 is not None:
+            melody1_nz = compute_end_time_stamps(melody1, convert_to_midi, round_method)
+        else:
+            melody1_nz = None
 
-    melody3 = create_melody3_annotation(mtrack,fs,hop)
-    if melody3 is not None:
-        if convert_to_midi:
-            melody3[:,1:] = librosa.hz_to_midi(melody3[:,1:])
-        if round_method == 'round':
-            melody3[:,1:] = np.round(melody3[:,1:])
-        if round_method == 'ceil':
-            melody3[:,1:] = np.round(melody3[:,1:])
-        melody3_nz = melody3
-        melody3_nz[melody3_nz==-np.inf] = 0
-    else:
-        melody3_nz = None
+        melody2 = create_melody2_annotation(mtrack,fs,hop)
+        if melody2 is not None:
+            melody2_nz = compute_end_time_stamps(melody2, convert_to_midi, round_method)
+        else:
+            melody2_nz = None
+
+        melody3 = create_melody3_annotation(mtrack,fs,hop)
+        if melody3 is not None:
+            if convert_to_midi:
+                melody3[:,1:] = librosa.hz_to_midi(melody3[:,1:])
+            if round_method == 'round':
+                melody3[:,1:] = np.round(melody3[:,1:])
+            if round_method == 'ceil':
+                melody3[:,1:] = np.round(melody3[:,1:])
+            melody3_nz = melody3
+            melody3_nz[melody3_nz==-np.inf] = 0
+        else:
+            melody3_nz = None
+    
     if to_csv:
         write_melodies_to_csv_forked(mtrack, output_dir, melody1_nz, melody2_nz, melody3_nz, overwrite=overwrite)
     else:
