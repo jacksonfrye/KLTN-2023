@@ -1,25 +1,31 @@
 import csv
+import json
 import os
 from typing import Dict, Generator, List, Tuple, Union
 
 import librosa
 import numpy as np
+import pandas as pd
 import torch
+from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset
 from torchaudio.functional import amplitude_to_DB
 from torchaudio.transforms import MelSpectrogram
 
-from medleydb import load_all_multitracks
-# from pitch_tracker.utils import files
+from medleydb import load_all_multitracks, load_multitracks
 from pitch_tracker.utils.audio import load_audio_mono
 from pitch_tracker.utils.constants import (ONSET_TIME_THRESHOLD,
-                                           PICKING_FRAME_SIZE, PRE_MIDI_START)
-from pitch_tracker.utils.files import (flatten_list, get_file_name, list_file_paths_in_dir,
-                                       load_pickle, save_pickle, list_all_file_paths_in_dir)
+                                           PICKING_FRAME_SIZE, PRE_MIDI_START,
+                                           RANDOM_STATE)
+from pitch_tracker.utils.files import (flatten_list, get_file_name,
+                                       list_all_file_paths_in_dir,
+                                       list_file_paths_in_dir,
+                                       list_folder_paths_in_dir, load_pickle,
+                                       save_pickle)
 
 DIST_THRESHOLD = 0.1
 EMPTY_THRESHOLD = PICKING_FRAME_SIZE / 5
-
+DATA_SPLIT_PATH = os.path.join(os.path.dirname(__file__), 'data_split.json')
 
 class AudioDataset(Dataset):
     """
@@ -430,6 +436,7 @@ def write_feature_label_to_disk(feature_label_generator: Generator, output_dir: 
         passed_files.append(label_name)
     return passed_files
 
+
 def write_feature_label_to_disk_by_frame(
     feature_label_generator: Generator,
     output_dir: str,
@@ -493,6 +500,122 @@ def write_feature_label_to_disk_by_frame(
         #             output_path, is_overwrite=is_overwrite)
         passed_files.append(label_name)
     return passed_files
+
+
+def build_info_from_track_list(track_list:Union[List, None]=None, pickled_data_dir:str=None):
+    """
+    Builds a DataFrame containing information about tracks.
+
+    This function takes in an optional list of track IDs and returns a DataFrame containing information about each track. 
+    If no list of track IDs is provided, the function loads all available tracks. 
+    The information includes the track ID, artist, predominant instrument, melody instruments, genre and duration. 
+    If a track does not have a melody file, it is skipped and its ID is added to a list of missing tracks.
+
+    Args:
+        track_list (list or None): An optional list of track IDs. If not provided, all available tracks are loaded.
+        pickled_data_dir (str): Path to the pickled data directory. If provided, content for 'pickled_path' column will be added. 
+
+    Returns:
+        tracks_info (DataFrame): A DataFrame containing information about each track with columns ['track_id', 'artist', 'predominant_instrument', 'melody2_instruments', 'genre', 'duration', 'has_bleed', 'pickled_path'].
+
+    """
+    if track_list:
+        mtracks = load_multitracks(track_list)
+    else:
+        # Load all data from V1 list
+        mtracks = load_all_multitracks()
+
+    tracks_info = []
+    missing_tracks = []
+    for mtrack in mtracks:
+        if not mtrack.has_melody:
+            missing_tracks.append(track_id)
+            continue
+        track_id = mtrack.track_id
+        predominant_instrument = mtrack.predominant_stem.instrument[0] if mtrack.predominant_stem is not None else ''
+        artist = mtrack.artist
+        genre = mtrack.genre
+        duration = mtrack.duration
+        has_bleed = mtrack.has_bleed
+        pickled_path = os.path.join(pickled_data_dir, track_id) if pickled_data_dir else ''
+        
+        intervals = {}
+        with open(mtrack.melody_intervals_fpath, 'rU') as fhandle:
+            linereader = csv.reader(fhandle, delimiter='\t')
+            for line in linereader:
+                stem_idx = int(line[2])
+                stem_instrument = mtrack.stems[stem_idx].instrument[0]
+                if stem_instrument not in intervals:
+                    intervals[stem_instrument] = 1
+                else:
+                    intervals[stem_instrument] +=1
+        melody2_instruments = [key for key in intervals]
+        tracks_info.append((track_id, artist, predominant_instrument, melody2_instruments, genre, duration, has_bleed, pickled_path))
+    print(f'Missing tracks: {len(missing_tracks)} {missing_tracks}')
+    tracks_info = pd.DataFrame(tracks_info, columns=['track_id', 'artist', 'predominant_instrument', 'melody2_instruments', 'genre', 'duration', 'has_bleed', 'pickled_path'])
+    return tracks_info
+
+
+
+def split_dataset_df(by:str='thesis', pickled_data_dir:str=None, random_state:int=RANDOM_STATE, shuffle:bool=True):
+    """
+    Splits a dataset into training, validation and test sets.
+
+    This function takes in several arguments to control how the dataset is split. 
+    The `by` argument specifies the method used to split the data:
+        If `by` is set to `'song_name'`: the data is randomized and split so that some samples from one song can be present in all three sets. 
+        If `by` is set to `'basaran2018CRNN'`: the data is split by artist according to a pre-defined split.
+        If `by` is set to `'thesis'`: the data is split by genre with a test set identical to that of 'basaran2018CRNN' for comparison.
+
+    Args:
+        by (str): The method used to split the data. Can be one of ['song_name', 'basaran2018CRNN', 'thesis'].
+        pickled_data_dir (str): The directory containing pickled data.
+        random_state (int): The random state used for reproducibility.
+        shuffle (bool): Whether or not to shuffle the data before splitting.
+
+    Returns:
+        train_set (DataFrame): A DataFrame containing information about tracks in the training set.
+        validation_set (DataFrame): A DataFrame containing information about tracks in the validation set.
+        test_set (DataFrame): A DataFrame containing information about tracks in the test set.
+
+    """
+    if by=='song_name':
+        df = build_info_from_track_list(track_list=None, pickled_data_dir=pickled_data_dir)
+        train_set, validation_set = train_test_split(df, test_size=0.40, random_state=random_state, shuffle=shuffle)
+        validation_set, test_set = train_test_split(validation_set, test_size=0.50, random_state=random_state, shuffle=shuffle)
+
+    # Split by artist, used in:
+    # https://github.com/dogacbasaran/ismir2018_dominant_melody_estimation/blob/master/random_dataset_splits/dataset-ismir-splits.json
+    # However the `AimeeNorwich_Child` file is broken so there's only 108/109 songs available
+    elif by=='basaran2018CRNN':
+        with open(DATA_SPLIT_PATH, 'r') as f:
+            splits = json.load(f)
+        # train_set = [os.path.join(DATASET_DIR, song_name) for song_name in splits['train']]
+        # validation_set = [os.path.join(DATASET_DIR, song_name) for song_name in splits['validation']]
+        # test_set = [os.path.join(DATASET_DIR, song_name) for song_name in splits['test']]
+        train_set = build_info_from_track_list(splits['train'], pickled_data_dir=pickled_data_dir)
+        validation_set = build_info_from_track_list(splits['validation'], pickled_data_dir=pickled_data_dir)
+        test_set = build_info_from_track_list(splits['test'], pickled_data_dir=pickled_data_dir)
+    
+    
+    # split by genre, the test set is identical to `basaran2018CRNN` for comparison
+    elif by=='thesis':
+        with open(DATA_SPLIT_PATH, 'r') as f:
+            splits = json.load(f)
+        train_validation_set = splits['train'] + splits['validation']
+        train_validation_set = build_info_from_track_list(train_validation_set, pickled_data_dir=pickled_data_dir)
+        test_set = build_info_from_track_list(splits['test'], pickled_data_dir=pickled_data_dir)
+        
+        train_set, validation_set = train_test_split(train_validation_set, test_size=0.33, stratify=train_validation_set['genre'], random_state=random_state, shuffle=shuffle)
+
+    else:
+        raise Exception(f"Invalid argument: `by` must be 'song_name', 'basaran2018CRNN', or 'thesis'. Received {by}.")
+
+    print(f'train_set: {len(train_set)}')
+    print(f'validation_set: {len(validation_set)}')
+    print(f'test_set: {len(test_set)}')
+
+    return train_set, validation_set, test_set
 
 
 def _get_note_messages_in_frame(note_messages: np.ndarray, stime, etime):

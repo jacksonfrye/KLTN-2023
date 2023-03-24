@@ -1,5 +1,7 @@
 from librosa import midi_to_hz, note_to_midi
 
+RANDOM_STATE = 42 # the answer to life, the universe and everything
+
 HOP_LENGTH = 512
 N_FFT = 1024
 WIN_LENGTH = None
