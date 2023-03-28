@@ -66,7 +66,7 @@ def create_pickled_data(stft_hop_size, analysis_frame_size, n_mels):
         fmin=F_MIN
     )
 
-    output_pickled_dir = f'{SRC_PATH}/content/pickled_database/{stft_hop_size}_{analysis_frame_size}/'
+    output_pickled_dir = f'{SRC_PATH}/content/pickled_database/{stft_hop_size}_{analysis_frame_size}_{n_mels}/'
     passed_songs = dataset.write_feature_label_to_disk_by_frame(
         feature_label_gen, output_pickled_dir, categorize_by_subdir = True)
     failed_songs = [label for label in dataset_paths if label not in passed_songs]
@@ -83,7 +83,7 @@ def main():
                         help='number of mel frequency/features bands. default 88')
     args = parser.parse_args()
 
-    output_label_dir = f'{SRC_PATH}/content/gen_label/{args.stft_hop_size}_{args.analysis_frame_size}/'
+    output_label_dir = f'{SRC_PATH}/content/gen_label/{args.stft_hop_size}_{args.analysis_frame_size}_{args.n_mels}/'
     convert_label(args.stft_hop_size, args.analysis_frame_size, output_label_dir)
     create_pickled_data(args.stft_hop_size, args.analysis_frame_size, args.n_mels)
 
