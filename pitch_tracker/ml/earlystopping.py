@@ -90,7 +90,7 @@ class EarlyStopping:
         os.makedirs(self.dir_path, exist_ok=True)
 
         time_stamp = datetime.now().strftime(self.CHECKPOINT_TIMESTAMP)
-        checkpoint_name = f'{time_stamp}_{self.CHECKPOINT_PREFIX}_{val_loss:.6f}{self.CHECKPOINT_FORMAT}'
+        checkpoint_name = f'{time_stamp}_{self.CHECKPOINT_PREFIX}_{val_loss:.6f}.{self.CHECKPOINT_FORMAT}'
         model_path = os.path.join(self.dir_path, checkpoint_name)
         
         torch.save(model.state_dict(), model_path)
