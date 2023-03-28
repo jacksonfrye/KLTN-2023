@@ -559,7 +559,7 @@ def build_info_from_track_list(track_list:Union[List, None]=None, pickled_data_d
 
 
 
-def split_dataset_df(by:str='thesis', pickled_data_dir:str=None, random_state:int=RANDOM_STATE, shuffle:bool=True):
+def split_dataset_df(by:str='thesis', pickled_data_dir:str=None, random_state:int=RANDOM_STATE, shuffle:bool=True, train_ratio:float=0.8):
     """
     Splits a dataset into training, validation and test sets.
 
@@ -574,6 +574,8 @@ def split_dataset_df(by:str='thesis', pickled_data_dir:str=None, random_state:in
         pickled_data_dir (str): The directory containing pickled data.
         random_state (int): The random state used for reproducibility.
         shuffle (bool): Whether or not to shuffle the data before splitting.
+        train_ratio (float): The ration between train and validation set in `thesis`. If train_ratio = 0.65 then validation ratio is 0.35.
+                             Note that this number does not affect the test size. Default to 0.8.
 
     Returns:
         train_set (DataFrame): A DataFrame containing information about tracks in the training set.
@@ -608,7 +610,7 @@ def split_dataset_df(by:str='thesis', pickled_data_dir:str=None, random_state:in
         train_validation_set = build_info_from_track_list(train_validation_set, pickled_data_dir=pickled_data_dir)
         test_set = build_info_from_track_list(splits['test'], pickled_data_dir=pickled_data_dir)
         
-        train_set, validation_set = train_test_split(train_validation_set, test_size=0.33, stratify=train_validation_set['genre'], random_state=random_state, shuffle=shuffle)
+        train_set, validation_set = train_test_split(train_validation_set, train_size=train_ratio, stratify=train_validation_set['genre'], random_state=random_state, shuffle=shuffle)
 
     else:
         raise Exception(f"Invalid argument: `by` must be 'song_name', 'basaran2018CRNN', or 'thesis'. Received {by}.")
