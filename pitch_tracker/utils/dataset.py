@@ -14,9 +14,9 @@ from torchaudio.transforms import MelSpectrogram
 
 from medleydb import load_all_multitracks, load_multitracks
 from pitch_tracker.utils.audio import load_audio_mono
-from pitch_tracker.utils.constants import (ONSET_TIME_THRESHOLD,
-                                           PICKING_FRAME_SIZE, PRE_MIDI_START,
-                                           RANDOM_STATE)
+from pitch_tracker.utils.constants import (F_MIN, ONSET_TIME_THRESHOLD,
+                                           PATCH_SIZE, PRE_MIDI_START,
+                                           RANDOM_STATE, SAMPLE_RATE)
 from pitch_tracker.utils.files import (flatten_list, get_file_name,
                                        list_all_file_paths_in_dir,
                                        list_file_paths_in_dir,
@@ -24,7 +24,7 @@ from pitch_tracker.utils.files import (flatten_list, get_file_name,
                                        save_pickle)
 
 DIST_THRESHOLD = 0.1
-EMPTY_THRESHOLD = PICKING_FRAME_SIZE / 5
+EMPTY_THRESHOLD = PATCH_SIZE / 5
 DATA_SPLIT_PATH = os.path.join(os.path.dirname(__file__), 'data_split.json')
 
 class AudioDataset(Dataset):
@@ -156,23 +156,23 @@ def create_dataset_path_dict(label_dir: str) -> Dict[str, Tuple[str, str]]:
 
 def build_pick_features_and_time(
         STFT_features: np.ndarray,
-        picking_frame_step: int,
-        picking_frame_size: int,
-        step_frame: int,
-        step_time: int) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
+        patch_step: int,
+        patch_size: int,
+        analysis_frame_size: int,
+        analysis_frame_time: int) -> Generator[Tuple[np.ndarray, np.ndarray], None, None]:
 
     n_frames = STFT_features.shape[0]
-    n_win_frames = int(np.ceil(n_frames / step_frame / picking_frame_step))
+    n_win_frames = int(np.ceil(n_frames / analysis_frame_size / patch_step))
 
-    times_1D = np.arange(0, n_win_frames * picking_frame_size) * step_time
+    times_1D = np.arange(0, n_win_frames * patch_size) * analysis_frame_time
     pick_features = np.zeros(
-        (n_win_frames, picking_frame_size * step_frame, STFT_features.shape[1]))
-    pick_times = np.zeros((n_win_frames, picking_frame_size))
+        (n_win_frames, patch_size * analysis_frame_size, STFT_features.shape[1]))
+    pick_times = np.zeros((n_win_frames, patch_size))
 
-    for i, j in enumerate(range(0, n_frames, picking_frame_step*step_frame)):
+    for i, j in enumerate(range(0, n_frames, patch_step*analysis_frame_size)):
         pick_times[i, :] = times_1D[int(
-            j/step_frame):int(j/step_frame)+picking_frame_size]
-        end_idx = j + picking_frame_size * step_frame
+            j/analysis_frame_size):int(j/analysis_frame_size)+patch_size]
+        end_idx = j + patch_size * analysis_frame_size
         end_idx = end_idx if end_idx < n_frames else n_frames
         copy_size = end_idx - j
         pick_features[i, :copy_size, :] = STFT_features[range(j, end_idx), :]
@@ -186,14 +186,14 @@ def create_label_generator(
         dist_threshold: float,
         empty_threshold: float,
         onset_time_threshold: float,
-        picking_frame_size: int,
-        step_time: int,
+        patch_size: int,
+        analysis_frame_time: int,
         n_class: int,
         pre_midi_start: int = PRE_MIDI_START) -> Generator[Tuple[np.ndarray, np.ndarray, np.ndarray], None, None]:
 
     for t_frame in feature_times:
-        stime = t_frame[0] - step_time
-        etime = t_frame[-1] + step_time
+        stime = t_frame[0] - analysis_frame_time
+        etime = t_frame[-1] + analysis_frame_time
 
         note_messages_in_frame = _get_note_messages_in_frame(
             note_messages, stime, etime)
@@ -201,7 +201,7 @@ def create_label_generator(
         onset_labels = _get_onset_label(
             note_messages_in_frame,
             t_frame,
-            picking_frame_size,
+            patch_size,
             onset_time_threshold
         )
 
@@ -211,13 +211,13 @@ def create_label_generator(
             onset_labels,
             dist_threshold,
             empty_threshold,
-            picking_frame_size
+            patch_size
         )
 
         pitch_labels = _get_pitch_label(
             t_frame,
             note_messages_in_frame,
-            picking_frame_size=picking_frame_size,
+            patch_size=patch_size,
             n_class=n_class,
             pre_midi_start=pre_midi_start
         )
@@ -242,9 +242,9 @@ def extract_melspectrogram_feature(
         n_fft: int,
         hop_length: int,
         n_mels: int,
-        sample_rate: int = 44100,
+        sample_rate: int = SAMPLE_RATE,
         win_length: int = None,
-        fmin: float = 0.0,
+        fmin: float = F_MIN,
         mean: float = 0.0,
         var: float = 1.0,
         backend: str = 'torch') -> Union[np.ndarray, torch.Tensor]:
@@ -273,7 +273,7 @@ def extract_melspectrogram_feature(
             win_length=win_length,
             pad_mode='constant',
             center=True,
-            f_min=librosa.midi_to_hz(21),
+            f_min=fmin,
             f_max=None,
             n_mels=n_mels,
             power=2.0,
@@ -322,12 +322,13 @@ def create_feature_label_generator(
         n_mels: int,
         n_class: int,
         hop_length: int,
-        picking_frame_step: int,
-        picking_frame_size: int,
-        step_frame: int,
-        step_time: int,
+        patch_step: int,
+        patch_size: int,
+        analysis_frame_size: int,
+        analysis_frame_time: int,
         dist_threshold: float,
-        empty_threshold: float):
+        empty_threshold: float,
+        fmin:float):
 
     # label_paths = (label_path for label_path, _ in dataset_path_dict.values())
     # audio_paths = (audio_path for _, audio_path in dataset_path_dict.values())
@@ -357,15 +358,16 @@ def create_feature_label_generator(
             n_fft=n_fft,
             hop_length=hop_length,
             n_mels=n_mels,
-            backend='librosa'
+            backend='librosa',
+            fmin=fmin
         )
 
         pick_features, pick_times = build_pick_features_and_time(
             melspectrogram_features.T,
-            picking_frame_step,
-            picking_frame_size,
-            step_frame,
-            step_time
+            patch_step,
+            patch_size,
+            analysis_frame_size,
+            analysis_frame_time
         )
 
         label_generator = create_label_generator(
@@ -374,8 +376,8 @@ def create_feature_label_generator(
             dist_threshold=dist_threshold,
             empty_threshold=empty_threshold,
             onset_time_threshold=ONSET_TIME_THRESHOLD,
-            picking_frame_size=picking_frame_size,
-            step_time=step_time,
+            patch_size=patch_size,
+            analysis_frame_time=analysis_frame_time,
             n_class=n_class,
             pre_midi_start=PRE_MIDI_START,
         )
@@ -629,10 +631,10 @@ def _get_note_messages_in_frame(note_messages: np.ndarray, stime, etime):
 def _get_onset_label(
         note_messages_in_frame: np.ndarray,
         t_frame,
-        picking_frame_size: int,
+        patch_size: int,
         onset_time_threshold: float):
 
-    onset_labels = np.zeros(picking_frame_size)
+    onset_labels = np.zeros(patch_size)
     for of in note_messages_in_frame[:, 0]:
         diff = np.abs(of - t_frame)
         onset_idx = diff < onset_time_threshold
@@ -647,8 +649,8 @@ def _get_duration_label(
         onset_labels,
         dist_threshold: float,
         empty_threshold: float,
-        picking_frame_size: int):
-    duration_labels = np.zeros(picking_frame_size)
+        patch_size: int):
+    duration_labels = np.zeros(patch_size)
     for i, t in enumerate(t_frame):
         if onset_labels[i]:
             duration_labels[i] = 1
@@ -671,10 +673,10 @@ def _get_duration_label(
 def _get_pitch_label(
         t_frame,
         note_messages_in_frame: np.ndarray,
-        picking_frame_size: int,
+        patch_size: int,
         n_class: int,
         pre_midi_start: int):
-    pitch_labels = np.zeros((picking_frame_size, n_class))
+    pitch_labels = np.zeros((patch_size, n_class))
     for i, t in enumerate(t_frame):
         idx = np.flatnonzero(
             (note_messages_in_frame[:, 0] <= t) & (note_messages_in_frame[:, 1] > t))
