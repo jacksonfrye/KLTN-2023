@@ -39,7 +39,7 @@ def convert_label(stft_hop_size, analysis_frame_size, output_label_dir:str):
         # gen_label(mtrack.track_id, output_dir, hop=HOP, overwrite=True, convert_to_midi=True, round_method='round', to_csv=False)
         pass
 
-def create_pickled_data(stft_hop_size, analysis_frame_size):
+def create_pickled_data(stft_hop_size, analysis_frame_size, n_mels):
     label_dir = f'{SRC_PATH}/content/gen_label/{stft_hop_size}_{analysis_frame_size}/Melody2_midi/'
     label_dict = dataset.create_label_dict_from_dir(label_dir)
     
@@ -54,7 +54,7 @@ def create_pickled_data(stft_hop_size, analysis_frame_size):
         dataset_path_dict=dataset_paths,
         sample_rate=SAMPLE_RATE,
         n_fft=N_FFT,
-        n_mels=N_MELS,
+        n_mels=n_mels,
         n_class=N_CLASS,
         hop_length=stft_hop_size,
         patch_step=patch_step,
@@ -79,11 +79,13 @@ def main():
                         help='STFT Hop size for label conversion and pickled data creation')
     parser.add_argument('--analysis_frame_size', type=int, default=5,
                         help='number of STFT frames to form an onset/analysis frame')
+    parser.add_argument('--n_mels', type=int, default=88,
+                        help='number of mel frequency/features bands. default 88')
     args = parser.parse_args()
 
     output_label_dir = f'{SRC_PATH}/content/gen_label/{args.stft_hop_size}_{args.analysis_frame_size}/'
     convert_label(args.stft_hop_size, args.analysis_frame_size, output_label_dir)
-    create_pickled_data(args.stft_hop_size, args.analysis_frame_size)
+    create_pickled_data(args.stft_hop_size, args.analysis_frame_size, args.n_mels)
 
 if __name__ == '__main__':
     main()
