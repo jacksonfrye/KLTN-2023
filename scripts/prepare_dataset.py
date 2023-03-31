@@ -40,7 +40,7 @@ def convert_label(stft_hop_size, analysis_frame_size, output_label_dir:str):
         pass
 
 def create_pickled_data(stft_hop_size, analysis_frame_size, n_mels):
-    label_dir = f'{SRC_PATH}/content/gen_label/{stft_hop_size}_{analysis_frame_size}/Melody2_midi/'
+    label_dir = f'{SRC_PATH}/content/gen_label/{stft_hop_size}_{analysis_frame_size}_{n_mels}/Melody2_midi/'
     label_dict = dataset.create_label_dict_from_dir(label_dir)
     
     for k, v in label_dict.items():
