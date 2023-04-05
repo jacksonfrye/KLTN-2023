@@ -55,8 +55,10 @@ def train(
         batch_target_size = pos_neg_arr.numel()
         batch_correct = torch.nonzero(pos_neg_arr).numel()
         batch_accuracy = batch_correct/batch_target_size
-
-        melody_score = melody_evaluate(y_true=y3, y_pred=y_pred)
+        
+        y_true_cpu = y3.cpu()
+        y_pred_cpu = y_pred.cpu()
+        melody_score = melody_evaluate(y_true=y_true_cpu, y_pred=y_pred_cpu)
         
         total_target_size += batch_target_size
         total_correct += batch_correct
@@ -68,14 +70,14 @@ def train(
 
         running_loss += loss.item()
         if batch % 50 == 0:
-            print(f"[{batch+1:>5d}/{total_batches:>5d}]\
-                  Batch Accuracy: {(100*batch_accuracy):>0.1f}%,\
-                  Voicing Recall: {melody_score['Voicing Recall']:>.4f},\
-                  Voicing False Alarm: {melody_score['Voicing False Alarm']:>.4f},\
-                  Raw Pitch Accuracy: {melody_score['Raw Pitch Accuracy']:>.4f},\
-                  Raw Chroma Accuracy: {melody_score['Raw Chroma Accuracy']:>.4f},\
-                  Overall Accuracy: {melody_score['Overall Accuracy']:>.4f},\
-                  current loss: {running_loss/(batch+1):>7f}")
+            print((f"[{batch+1:>5d}/{total_batches:>5d}]\t"
+                  f"Batch Accuracy: {(100*batch_accuracy):>0.1f}%, "
+                  f"Voicing Recall: {melody_score['Voicing Recall']:>.4f}, "
+                  f"Voicing False Alarm: {melody_score['Voicing False Alarm']:>.4f}, "
+                  f"Raw Pitch Accuracy: {melody_score['Raw Pitch Accuracy']:>.4f}, "
+                  f"Raw Chroma Accuracy: {melody_score['Raw Chroma Accuracy']:>.4f}, "
+                  f"Overall Accuracy: {melody_score['Overall Accuracy']:>.4f}, "
+                  f"current loss: {running_loss/(batch+1):>7f}"))
 
     avg_loss = running_loss / total_batches
     avg_accuracy = total_correct / total_target_size

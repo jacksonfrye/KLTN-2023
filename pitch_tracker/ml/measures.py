@@ -16,10 +16,10 @@ def class_to_frequency(class_inputs:torch.Tensor, midi_start=MIDI_START, n_class
     return output_frequencies
 
 def melody_evaluate(y_true:torch.Tensor, y_pred:torch.Tensor):
-    # y_true size: [n_batches, n_classes]
+    # y size: [n_batches, n_frames, n_classes]
     
-    y_true_labels = torch.argmax(y_true, dim=1)
-    y_pred_labels = torch.argmax(y_pred, dim=1)
+    y_true_labels = torch.argmax(y_true, dim=-1).flatten()
+    y_pred_labels = torch.argmax(y_pred, dim=-1).flatten()
 
     ref_freq = class_to_frequency(y_true_labels)
     est_freq = class_to_frequency(y_pred_labels)
