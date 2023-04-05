@@ -16,7 +16,7 @@ PATCH_STEP = int(PATCH_SIZE/2)
 
 
 N_MELS = 88
-N_CLASS = 88
+N_CLASS = 89 # 1 non-melody class + 88 pitch classes
 ONSET_TIME_THRESHOLD = 0.06
 
 # 88 keyboards, A0->C8

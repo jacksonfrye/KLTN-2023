@@ -122,3 +122,6 @@ def remix_torch(signal, num_channels):
         raise NotImplementedError((
             f"Requested {num_channels} channels, but got {signal.shape[1]} channels "
             "and channel conversion is not implemented."))
+
+def midi_to_hz(midi_value:float):
+    return 440.0 * (2.0 ** ((torch.as_tensor(midi_value) - 69.0) / 12.0))

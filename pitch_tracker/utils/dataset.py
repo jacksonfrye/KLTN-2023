@@ -325,7 +325,7 @@ def create_feature_label_generator(
         patch_step: int,
         patch_size: int,
         analysis_frame_size: int,
-        analysis_frame_time: int,
+        analysis_frame_time: float,
         dist_threshold: float,
         empty_threshold: float,
         fmin:float):
@@ -686,7 +686,8 @@ def _get_pitch_label(
             last_label_idx = idx[-1]
 
             # original pitch values are substract with `pre_midi_start`
-            # so they start from 0 and become the indices
+            # so they become the indices from 1 to `n_class-1`
+            # 0 is non-melody/ non-pitch by default.
             note_pitch = int(
                 note_messages_in_frame[last_label_idx, 2] - pre_midi_start)
             pitch_labels[i, note_pitch] = 1

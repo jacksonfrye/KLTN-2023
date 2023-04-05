@@ -112,7 +112,7 @@ def save_pickle(obj, file_path, dir_path=None, is_overwrite=True):
     #     return obj_file
     return None
 
-def load_pickle(file_path):
+def load_pickle(file_path:str):
     """Save an object from a pickled file
 
     Parameters
