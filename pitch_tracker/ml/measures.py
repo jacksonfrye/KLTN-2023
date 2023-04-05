@@ -17,6 +17,7 @@ def class_to_frequency(class_inputs:torch.Tensor, midi_start=MIDI_START, n_class
 
 def melody_evaluate(y_true:torch.Tensor, y_pred:torch.Tensor):
     # y size: [n_batches, n_frames, n_classes]
+    y_true, y_pred = y_true.cpu(), y_pred.cpu()
     
     y_true_labels = torch.argmax(y_true, dim=-1).flatten()
     y_pred_labels = torch.argmax(y_pred, dim=-1).flatten()

@@ -56,9 +56,7 @@ def train(
         batch_correct = torch.nonzero(pos_neg_arr).numel()
         batch_accuracy = batch_correct/batch_target_size
         
-        y_true_cpu = y3.cpu()
-        y_pred_cpu = y_pred.cpu()
-        melody_score = melody_evaluate(y_true=y_true_cpu, y_pred=y_pred_cpu)
+        melody_score = melody_evaluate(y_true=y3, y_pred=y_pred)
         
         total_target_size += batch_target_size
         total_correct += batch_correct
@@ -72,12 +70,13 @@ def train(
         if batch % 50 == 0:
             print((f"[{batch+1:>5d}/{total_batches:>5d}]\t"
                   f"Batch Accuracy: {(100*batch_accuracy):>0.1f}%, "
+                  f"current loss: {running_loss/(batch+1):>7f}, "
                   f"Voicing Recall: {melody_score['Voicing Recall']:>.4f}, "
                   f"Voicing False Alarm: {melody_score['Voicing False Alarm']:>.4f}, "
                   f"Raw Pitch Accuracy: {melody_score['Raw Pitch Accuracy']:>.4f}, "
                   f"Raw Chroma Accuracy: {melody_score['Raw Chroma Accuracy']:>.4f}, "
-                  f"Overall Accuracy: {melody_score['Overall Accuracy']:>.4f}, "
-                  f"current loss: {running_loss/(batch+1):>7f}"))
+                  f"Overall Accuracy: {melody_score['Overall Accuracy']:>.4f}"
+                  ))
 
     avg_loss = running_loss / total_batches
     avg_accuracy = total_correct / total_target_size
@@ -106,20 +105,38 @@ def test(
     running_loss = 0
     n_correct = 0
     model.eval()
+    y_trues = []
+    y_preds = []
     with torch.no_grad():
         for X, (y1, y2, y3) in dataloader:
             X, y3 = X.to(device), y3.to(device)
-            y_pred = model(X)
+            y_pred:torch.Tensor = model(X)
             running_loss += loss_fn(y_pred, y3).item()
 
-            pos_neg_arr = (y_pred.argmax(2) == y3.argmax(2)).flatten()
+
+            y3_to_label = y3.argmax(2)
+            y_pred_to_label = y_pred.argmax(2)
+
+            y_trues.append(y3_to_label)
+            y_preds.append(y_pred_to_label)
+
+            pos_neg_arr = (y_pred_to_label == y3_to_label).flatten()
             n_size += pos_neg_arr.numel()
             n_correct += torch.nonzero(pos_neg_arr).numel()
 
+    y_trues = torch.cat(y_trues,dim=0)
+    y_preds = torch.cat(y_preds,dim=0)
+
+    melody_score = melody_evaluate(y_true=y_trues, y_pred=y_preds)
+    
     avg_loss = running_loss / num_batches
     avg_accuracy = n_correct / n_size
-    print(f"Test Error: \n Accuracy: {(100*avg_accuracy):>0.1f}%, Avg loss: {avg_loss:>8f} \n")
-    
+    print((f"Test Error: \n Accuracy: {(100*avg_accuracy):>0.1f}%, Avg loss: {avg_loss:>8f} \n"
+            f"Voicing Recall: {melody_score['Voicing Recall']:>.4f}, "
+            f"Voicing False Alarm: {melody_score['Voicing False Alarm']:>.4f}, "
+            f"Raw Pitch Accuracy: {melody_score['Raw Pitch Accuracy']:>.4f}, "
+            f"Raw Chroma Accuracy: {melody_score['Raw Chroma Accuracy']:>.4f}, "
+            f"Overall Accuracy: {melody_score['Overall Accuracy']:>.4f}"))
     
     return avg_loss, avg_accuracy
 
