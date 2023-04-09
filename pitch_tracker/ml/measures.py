@@ -37,6 +37,6 @@ def melody_evaluate(y_true:torch.Tensor, y_pred:torch.Tensor):
         est_time=time_1d.numpy(),
         est_freq=est_freq.numpy(),
         cent_tolerance=51
-        ),
+        )
     
     return scores 
