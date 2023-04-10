@@ -6,6 +6,8 @@ A data driven Mono Pitch Tracker using Pytorch.
 # Setup
 We recommend using anaconda/mini-conda to setup the project.
 
+The project aslo contains a forked version of [medleydb](https://github.com/marl/medleydb).
+
 1. Clone this repo and its submodules:
 ```
 git clone --recursive https://github.com/duotien/mono_pitch_tracker.git
@@ -47,7 +49,7 @@ If you would like to reproduce this experiment, start with the jupyter notebooks
 Below are the datasets used in this experiment:
 
 - [MIREX05 & ADC2004](http://labrosa.ee.columbia.edu/projects/melody/) (for testing)
-- [MedleyDB](https://medleydb.weebly.com/) (for training & testing)
+- [MedleyDB](https://medleydb.weebly.com/) [1] (for training & testing)
 
 The MedleyDB audio files are available through permission request. If you want to see how the dataset is structured, you can download 2 samples on their [download webpage](https://medleydb.weebly.com/downloads.html).
 
@@ -55,8 +57,8 @@ The data splits for MedleyDB is located in `./pitch_tracker/utils/data_split.jso
 
 ## Model
 
-Our melody extraction model is based on basaran2018CRNN [1]. However, we use mel-spectrogram as our model input and output 88 notes based on the 88 keys piano.
+Our melody extraction model is based on [basaran2018CRNN](https://github.com/dogacbasaran/ismir2018_dominant_melody_estimation/blob/master/CRNN/C-RNN_model1.py) [2]. However, we use mel-spectrogram as our model input and output 88 notes based on the 88 keys piano.
 
 # Citations & Acknowledgements
-
-> [1] D. Basaran, S. Essid and G. Peeters, Main Melody Extraction with Source-Filter NMF and CRNN, In 18th International Society for Music Information Retrieval Conference, ISMIR, 2018, Paris, France
+> [1] R. Bittner, J. Salamon, M. Tierney, M. Mauch, C. Cannam and J. P. Bello, "MedleyDB: A Multitrack Dataset for Annotation-Intensive MIR Research", in 15th International Society for Music Information Retrieval Conference, Taipei, Taiwan, Oct. 2014. \
+> [2] D. Basaran, S. Essid and G. Peeters, Main Melody Extraction with Source-Filter NMF and CRNN, In 18th International Society for Music Information Retrieval Conference, ISMIR, 2018, Paris, France
