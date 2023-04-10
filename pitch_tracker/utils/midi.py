@@ -1,10 +1,13 @@
-import mido
-import pandas as pd
-import numpy as np
 from functools import partial
+from typing import Union
+
+import mido
+import numpy as np
+import pandas as pd
+import torch
 
 
-def build_note_messages(csv_path: str, ticks_per_beat: int = 480, tempo: int = 500_000, base_velocity: int = 50):
+def build_note_messages_from_file(csv_path: str, ticks_per_beat: int = 480, tempo: int = 500_000, base_velocity: int = 50):
     df = pd.read_csv(csv_path, header=None)
     if len(df.columns) == 3:
         df[3] = base_velocity
@@ -14,6 +17,19 @@ def build_note_messages(csv_path: str, ticks_per_beat: int = 480, tempo: int = 5
     note_messages = note_messages.astype(int)
     return note_messages
 
+def build_note_messages(note_messages:Union[np.ndarray, torch.Tensor], ticks_per_beat: int = 480, tempo: int = 500_000, base_velocity: int = 50):
+    s2t = partial(mido.second2tick, ticks_per_beat=ticks_per_beat, tempo=tempo)
+    if isinstance(note_messages, np.ndarray):
+        note_messages[:, 0:2] = np.apply_along_axis(s2t, 1, note_messages[:, 0:2])
+        note_messages = note_messages.astype(int)
+    
+    if isinstance(note_messages, torch.Tensor):
+        note_messages[:, 0:2] = torch.stack([
+            s2t(x_i) for x_i in torch.unbind(note_messages[:, 0:2], dim=1)
+            ], dim=1)
+        note_messages = note_messages.type(torch.int)
+    
+    return note_messages
 
 def _merge_consecutive_trues(arr: np.ndarray) -> list:
     # Find the indices where the array changes from True to False or vice versa
@@ -78,7 +94,7 @@ def try_merge_continuous_note_messages(note_messages, continuous_distance_thresh
 
 def convert_to_midi(note_messages, ticks_per_beat: int = 480):
     midi = mido.MidiFile()
-    midi.ticks_per_beat = 480
+    midi.ticks_per_beat = ticks_per_beat
     track = mido.MidiTrack()
     midi.tracks.append(track)
     last_note_end_tick = 0
@@ -86,6 +102,9 @@ def convert_to_midi(note_messages, ticks_per_beat: int = 480):
         last_note_tick_distance = start_tick - last_note_end_tick
         duration_tick = end_tick - start_tick
 
+        # fix real time -> integer rounding problem
+        if last_note_tick_distance < 0:
+            last_note_tick_distance = 0
         # Create note_on and note_off messages using the values
         note_on = mido.Message('note_on', note=midi_value,
                                velocity=velocity, time=last_note_tick_distance)
