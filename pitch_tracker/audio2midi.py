@@ -12,17 +12,17 @@ sys.path.extend([SRC_PATH, MEDLEYDB_PATH])
 import argparse
 
 def main():
-    parser = argparse.ArgumentParser(description='Convert audio files to MIDI files.')
-    parser.add_argument('src', type=str, help='Path to directory of audio files or list of audio file paths')
-    parser.add_argument('--out_dir', type=str, default='./', help='Output directory for MIDI files')
-    parser.add_argument('--vb', type=float, default=0.0, help='Voicing bias for melody extraction')
-    parser.add_argument('--device', type=str, default='cpu', help='Device to run model on')
-    parser.add_argument('--model_path', type=str, default=THESIS_2023_MODEL_PATH, help='Path to model')
+    parser = argparse.ArgumentParser(description='Convert audio files to MIDI files.', formatter_class=argparse.RawTextHelpFormatter, usage='%(prog)s [options]')
+    parser.add_argument('audio_paths', type=str, help='Path to directory of audio files or list of audio file paths')
+    parser.add_argument('-o', '--out_midi_dir', type=str, default='./', help='Output directory for MIDI files', metavar='')
+    parser.add_argument('-b', '--voicing_bias', type=float, default=0.0, help='Voicing bias for melody extraction', metavar='')
+    parser.add_argument('-d', '--device', type=str, default='cpu', help='Device to run model on', metavar='')
+    parser.add_argument('-m', '--model_path', type=str, default=THESIS_2023_MODEL_PATH, help='Path to model', metavar='')
 
     args = parser.parse_args()
 
     melody_extractor = MelodyExtractor(model_path=args.model_path, device=args.device)
-    melody_extractor.export_to_midis(args.src, args.out_dir, voicing_bias=args.vb)
+    melody_extractor.export_to_midis(args.audio_paths, args.out_midi_dir, voicing_bias=args.voicing_bias)
 
 if __name__ == '__main__':
     main()
