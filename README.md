@@ -64,5 +64,5 @@ Our melody extraction model is based on [basaran2018CRNN](https://github.com/dog
 > [2] D. Basaran, S. Essid and G. Peeters, Main Melody Extraction with Source-Filter NMF and CRNN, In 18th International Society for Music Information Retrieval Conference, ISMIR, 2018, Paris, France
 
 ## Members:
-- ### Đoàn Minh Nhật - 44.01.104.160
 - ### Dương Tiến - 44.01.104.193
+- ### Đoàn Minh Nhật - 44.01.104.160
