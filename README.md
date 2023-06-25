@@ -62,3 +62,7 @@ Our melody extraction model is based on [basaran2018CRNN](https://github.com/dog
 # Citations & Acknowledgements
 > [1] R. Bittner, J. Salamon, M. Tierney, M. Mauch, C. Cannam and J. P. Bello, "MedleyDB: A Multitrack Dataset for Annotation-Intensive MIR Research", in 15th International Society for Music Information Retrieval Conference, Taipei, Taiwan, Oct. 2014. \
 > [2] D. Basaran, S. Essid and G. Peeters, Main Melody Extraction with Source-Filter NMF and CRNN, In 18th International Society for Music Information Retrieval Conference, ISMIR, 2018, Paris, France
+
+## Members:
+- ### Đoàn Minh Nhật - 44.01.104.160
+- ### Dương Tiến - 44.01.104.193
